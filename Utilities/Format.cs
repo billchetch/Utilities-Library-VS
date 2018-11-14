@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace Utilities
 {
+    //Formatting class
     public static class Format
     {
         public static String AddSlashes(String s)
