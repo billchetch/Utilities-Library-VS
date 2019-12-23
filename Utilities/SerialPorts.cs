@@ -8,7 +8,7 @@ using System.IO.Ports;
 using System.Diagnostics;
 using System.Globalization;
 
-namespace Utilities
+namespace Chetch.Utilities
 {
     public static class SerialPorts
     {

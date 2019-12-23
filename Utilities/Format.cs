@@ -4,14 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Utilities
+namespace Chetch.Utilities
 {
     //Formatting class.
     public static class Format
     {
         public static String AddSlashes(String s)
         {
-            return s.Replace("'", "\\'");
+            return s == null ? null : s.Replace("'", "\\'");
         }
 
         public static String[] AddSlashes(String[] s)
