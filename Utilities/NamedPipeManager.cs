@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO.Pipes;
 using System.IO;
+using System.Xml.Serialization;
+using System.Xml;
 
 namespace Chetch.Utilities
 {
@@ -16,13 +18,118 @@ namespace Chetch.Utilities
         public const int DEFAULT_BUFFER_IN = 4096;
         public const int DEFAULT_BUFFER_OUT = 4096;
 
-        private struct PipeInfo
+        public struct PipeInfo
         {
             public String Name { get; set; }
             public PipeDirection Direction { get; set; }
             public PipeSecurity Security { get; set; }
             public PipeStream Stream { get; set; }
-            public Func<NamedPipeServerStream, int> OnClientConnect { get; set; }
+            public Func<PipeInfo, int> OnClientConnect { get; set; }
+        }
+
+        public class Utf8StringWriter : StringWriter
+        {
+            public override Encoding Encoding => Encoding.UTF8;
+        }
+
+        public enum MessageType
+        {
+            NOT_SET,
+            REGISTER_LISTENER
+        }
+
+        [Serializable]
+        public class Message
+        {
+            public MessageType Type;
+            public int SubType;
+            public List<String> Values = new List<string>();
+            public String Value
+            {
+                get
+                {
+                    return Values.Count > 0 ? Values[0] : null;
+                }
+                set
+                {
+                    if (Values.Count > 0)
+                    {
+                        Values[0] = Value;
+                    }
+                    else
+                    {
+                        Add(Value);
+                    }
+                }
+            }
+
+            public Message()
+            {
+                Type = MessageType.NOT_SET;
+            }
+
+            public Message(MessageType type = MessageType.NOT_SET)
+            {
+                Type = type;
+            }
+
+            public Message(String message, int subType = 0, MessageType type = MessageType.NOT_SET)
+            {
+                Add(message);
+                SubType = subType;
+                Type = type;
+            }
+
+            public Message(String message, MessageType type = MessageType.NOT_SET) : this(message, 0, type)
+            {
+
+            }
+
+            public void Add(String s)
+            {
+                Values.Add(s);
+            }
+
+            public void Clear()
+            {
+                Values.Clear();
+            }
+            
+            public void Serialize(StreamWriter stream)
+            {
+                XmlWriterSettings settings = new XmlWriterSettings();
+                settings.Indent = false;
+                settings.NewLineHandling = NewLineHandling.None;
+
+                String xmlStr;
+                using (StringWriter stringWriter = new Utf8StringWriter())
+                {
+                    using (XmlWriter xmlWriter = XmlWriter.Create(stringWriter, settings))
+                    {
+                        XmlSerializer serializer = new XmlSerializer(this.GetType());
+                        serializer.Serialize(xmlWriter, this); //, namespaces);
+                        xmlStr = stringWriter.ToString();
+                        xmlWriter.Close();
+                    }
+
+                    stringWriter.Close();
+                }
+
+                stream.WriteLine(xmlStr);
+            }
+
+            public static Message Deserialize(String s)
+            {
+                byte[] byteArray = Encoding.UTF8.GetBytes(s);
+                var stream = new MemoryStream(byteArray);
+                var writer = new StreamWriter(stream);
+                writer.Write(s);
+                writer.Flush();
+                stream.Position = 0;
+
+                var serializer = new XmlSerializer(typeof(Message));
+                return (Message)serializer.Deserialize(stream);
+            }
         }
 
         public static PipeSecurity GetSecurity(int securityMode)
@@ -40,7 +147,7 @@ namespace Chetch.Utilities
             return security;
         }
 
-        public static NamedPipeServerStream Create(String pipeName, PipeDirection direction, PipeSecurity security, Func<NamedPipeServerStream, int> OnClientConnect, int maxServerInstances = 1, int inBufferSize = DEFAULT_BUFFER_IN, int outBufferSize = DEFAULT_BUFFER_OUT)
+        public static NamedPipeServerStream Create(String pipeName, PipeDirection direction, PipeSecurity security, Func<PipeInfo, int> OnClientConnect, int maxServerInstances = 1, int inBufferSize = DEFAULT_BUFFER_IN, int outBufferSize = DEFAULT_BUFFER_OUT)
         {
             NamedPipeServerStream pipeServer = new NamedPipeServerStream(pipeName,
                                                                         direction,
@@ -69,16 +176,23 @@ namespace Chetch.Utilities
         {
             PipeInfo pipeInfo = (PipeInfo)result.AsyncState;
             NamedPipeServerStream pipeServer = (NamedPipeServerStream)pipeInfo.Stream;
+            int ret = pipeInfo.OnClientConnect != null ? WAIT_FOR_NEXT_CONNECTION : CLOSE_PIPE;
 
             // End waiting for the connection
-            pipeServer.EndWaitForConnection(result);
-
-            //do delegate function here
-            int ret = WAIT_FOR_NEXT_CONNECTION;
-            if (pipeInfo.OnClientConnect != null && pipeServer.IsConnected)
+            try
             {
-                ret = pipeInfo.OnClientConnect(pipeServer);
+                pipeServer.EndWaitForConnection(result);
+                //do delegate function here
+                if (pipeInfo.OnClientConnect != null && pipeServer.IsConnected)
+                {
+                    ret = pipeInfo.OnClientConnect(pipeInfo);
+                }
             }
+            catch (Exception)
+            {
+                ret = CLOSE_PIPE;
+            }
+            
 
             switch (ret)
             {
@@ -109,7 +223,7 @@ namespace Chetch.Utilities
 
                     }
                     break;
-            }
+            } //end switch
         }
     }
 }
