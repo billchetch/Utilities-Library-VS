@@ -82,7 +82,7 @@ namespace Chetch.Utilities
 
             public Message(String message, MessageType type = MessageType.NOT_SET) : this(message, 0, type)
             {
-
+                //empty
             }
 
             public void Add(String s)
