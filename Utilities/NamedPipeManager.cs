@@ -8,6 +8,7 @@ using System.IO;
 using System.Xml.Serialization;
 using System.Xml;
 
+
 namespace Chetch.Utilities
 {
     public static class NamedPipeManager
@@ -35,12 +36,19 @@ namespace Chetch.Utilities
         public enum MessageType
         {
             NOT_SET,
-            REGISTER_LISTENER
+            REGISTER_LISTENER,
+            CUSTOM,
+            INFO,
+            WARNING,
+            ERROR,
+            PING,
+            PING_RESPONSE
         }
 
         [Serializable]
         public class Message
         {
+            public String ID;
             public MessageType Type;
             public int SubType;
             public List<String> Values = new List<string>();
@@ -62,19 +70,22 @@ namespace Chetch.Utilities
                     }
                 }
             }
-
+            
             public Message()
             {
+                ID = CreateID();
                 Type = MessageType.NOT_SET;
             }
 
             public Message(MessageType type = MessageType.NOT_SET)
             {
+                ID = CreateID();
                 Type = type;
             }
 
             public Message(String message, int subType = 0, MessageType type = MessageType.NOT_SET)
             {
+                ID = CreateID();
                 Add(message);
                 SubType = subType;
                 Type = type;
@@ -83,6 +94,11 @@ namespace Chetch.Utilities
             public Message(String message, MessageType type = MessageType.NOT_SET) : this(message, 0, type)
             {
                 //empty
+            }
+
+            private String CreateID()
+            {
+                return System.Diagnostics.Process.GetCurrentProcess().Id.ToString() + "-" + this.GetHashCode() + "-" + DateTime.Now.ToString("yyyyMMddHHmmssffff");
             }
 
             public void Add(String s)
