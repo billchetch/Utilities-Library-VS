@@ -62,11 +62,11 @@ namespace Chetch.Utilities
                 {
                     if (Values.Count > 0)
                     {
-                        Values[0] = Value;
+                        Values[0] = value;
                     }
                     else
                     {
-                        Add(Value);
+                        Add(value);
                     }
                 }
             }
