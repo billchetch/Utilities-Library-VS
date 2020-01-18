@@ -42,7 +42,9 @@ namespace Chetch.Utilities
             WARNING,
             ERROR,
             PING,
-            PING_RESPONSE
+            PING_RESPONSE,
+            STATUS_REQUEST,
+            STATUS_RESPONSE
         }
 
         [Serializable]
@@ -111,7 +113,7 @@ namespace Chetch.Utilities
                 Values.Clear();
             }
             
-            public void Serialize(StreamWriter stream)
+            public String GetXML()
             {
                 XmlWriterSettings settings = new XmlWriterSettings();
                 settings.Indent = false;
@@ -130,11 +132,16 @@ namespace Chetch.Utilities
 
                     stringWriter.Close();
                 }
+                return xmlStr;
+            }
 
+            public void Serialize(StreamWriter stream)
+            {
+                var xmlStr = GetXML();
                 stream.WriteLine(xmlStr);
             }
 
-            public static Message Deserialize(String s)
+            public static T Deserialize<T>(String s)
             {
                 byte[] byteArray = Encoding.UTF8.GetBytes(s);
                 var stream = new MemoryStream(byteArray);
@@ -143,8 +150,8 @@ namespace Chetch.Utilities
                 writer.Flush();
                 stream.Position = 0;
 
-                var serializer = new XmlSerializer(typeof(Message));
-                return (Message)serializer.Deserialize(stream);
+                var serializer = new XmlSerializer(typeof(T));
+                return (T)serializer.Deserialize(stream);
             }
         }
 
