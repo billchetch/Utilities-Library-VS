@@ -7,8 +7,10 @@ using System.ComponentModel;
 
 namespace Chetch.Utilities
 {
-    public class DataSourceObject : INotifyPropertyChanged, ICloneable
+    public class DataSourceObject : INotifyPropertyChanged
     {
+        private Dictionary<String, Object> values = new Dictionary<String, Object>();
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         public void InvokePropertyChanged(PropertyChangedEventArgs e)
@@ -22,7 +24,10 @@ namespace Chetch.Utilities
             InvokePropertyChanged(new PropertyChangedEventArgs(propertyName));
         }
 
-        private Dictionary<String, Object> values = new Dictionary<String, Object>();
+        public void ClearValues()
+        {
+            values.Clear();
+        }
 
         public void SetValue(String propertyName, Object value, bool notify = true)
         {
@@ -48,14 +53,13 @@ namespace Chetch.Utilities
             return values.ContainsKey(propertyName) ? (String)values[propertyName] : null;
         }
 
-        public Object Clone()
+        public void AssignValues(DataSourceObject dso, bool notify = true)
         {
-            var obj = new DataSourceObject();
-            foreach(var kvp in values)
+            dso.ClearValues();
+            foreach (var kvp in values)
             {
-                obj.SetValue(kvp.Key, kvp.Value, false);
+                dso.SetValue(kvp.Key, kvp.Value, notify);
             }
-            return obj;
         }
 
         public void NotifyAll()
