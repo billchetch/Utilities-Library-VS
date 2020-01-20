@@ -15,6 +15,11 @@ namespace Chetch.Utilities
 
         public DateTime LastModified { get; set; }
 
+        public DataSourceObject()
+        {
+            //empty constructor
+        }
+
         public void InvokePropertyChanged(PropertyChangedEventArgs e)
         {
             PropertyChangedEventHandler handler = PropertyChanged;
@@ -61,7 +66,7 @@ namespace Chetch.Utilities
             return values.ContainsKey(propertyName) ? (String)values[propertyName] : null;
         }
 
-        public void CopyValues(DataSourceObject dso, bool clear = false, bool notify = true)
+        public void CopyValues(DataSourceObject dso, bool notify = true, bool clear = false)
         {
             if (clear)
             {
