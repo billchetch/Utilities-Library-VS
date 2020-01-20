@@ -48,17 +48,34 @@ namespace Chetch.Utilities
             return values.ContainsKey(propertyName) ? (String)values[propertyName] : null;
         }
 
+        public DateTime GetDateTimeValue(String propertyName)
+        {
+            return values.ContainsKey(propertyName) ? (DateTime)values[propertyName] : DateTime.MinValue;
+        }
+
         public Object GetValue(String propertyName)
         {
             return values.ContainsKey(propertyName) ? (String)values[propertyName] : null;
         }
 
-        public void AssignValues(DataSourceObject dso, bool notify = true)
+        public void CopyValues(DataSourceObject dso, bool clear = false, bool notify = true)
         {
-            dso.ClearValues();
+            if (clear)
+            {
+                dso.ClearValues();
+            }
+
             foreach (var kvp in values)
             {
                 dso.SetValue(kvp.Key, kvp.Value, notify);
+            }
+        }
+
+        public void CopyValue(DataSourceObject dso, String propertyName, bool notify = true)
+        {
+            if (values.ContainsKey(propertyName))
+            {
+                dso.SetValue(propertyName, values[propertyName], notify);
             }
         }
 
