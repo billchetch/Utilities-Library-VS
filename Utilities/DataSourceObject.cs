@@ -63,7 +63,7 @@ namespace Chetch.Utilities
 
         public Object GetValue(String propertyName)
         {
-            return values.ContainsKey(propertyName) ? (String)values[propertyName] : null;
+            return values.ContainsKey(propertyName) ? values[propertyName] : null;
         }
 
         public void CopyValues(DataSourceObject dso, bool notify = true, bool clear = false)
