@@ -13,6 +13,8 @@ namespace Chetch.Utilities
 
         public event PropertyChangedEventHandler PropertyChanged;
 
+        public DateTime LastModified { get; set; }
+
         public void InvokePropertyChanged(PropertyChangedEventArgs e)
         {
             PropertyChangedEventHandler handler = PropertyChanged;
@@ -32,6 +34,7 @@ namespace Chetch.Utilities
         public void SetValue(String propertyName, Object value, bool notify = true)
         {
             values[propertyName] = value;
+            LastModified = DateTime.Now;
             if (notify)
             {
                 InvokePropertyChanged(propertyName);
