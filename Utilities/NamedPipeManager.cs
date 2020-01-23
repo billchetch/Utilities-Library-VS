@@ -52,6 +52,7 @@ namespace Chetch.Utilities
         {
             public String ID;
             public String ResponseID; //normally the ID of the message that was sent requesting a response (e.g. Ping and Ping Response)
+            public String Sender; //normally the name of the 'inbound' pipe that will be listening for responses (this can be different from the 'outbound' pipe that the message is being sent down)
             public MessageType Type;
             public int SubType;
             public List<String> Values = new List<string>();
