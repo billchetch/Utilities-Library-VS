@@ -51,6 +51,7 @@ namespace Chetch.Utilities
         public class Message
         {
             public String ID;
+            public String ResponseID; //normally the ID of the message that was sent requesting a response (e.g. Ping and Ping Response)
             public MessageType Type;
             public int SubType;
             public List<String> Values = new List<string>();
