@@ -44,13 +44,15 @@ namespace Chetch.Utilities
             PING,
             PING_RESPONSE,
             STATUS_REQUEST,
-            STATUS_RESPONSE
+            STATUS_RESPONSE,
+            COMMAND
         }
 
         [Serializable]
         public class Message
         {
             public String ID;
+            public String Target; //to help routing to the correct place at the receive end
             public String ResponseID; //normally the ID of the message that was sent requesting a response (e.g. Ping and Ping Response)
             public String Sender; //normally the name of the 'inbound' pipe that will be listening for responses (this can be different from the 'outbound' pipe that the message is being sent down)
             public MessageType Type;
@@ -74,7 +76,7 @@ namespace Chetch.Utilities
                     }
                 }
             }
-            
+
             public Message()
             {
                 ID = CreateID();
