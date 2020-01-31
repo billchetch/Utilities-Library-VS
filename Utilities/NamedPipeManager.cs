@@ -45,7 +45,8 @@ namespace Chetch.Utilities
             PING_RESPONSE,
             STATUS_REQUEST,
             STATUS_RESPONSE,
-            COMMAND
+            COMMAND,
+            ERROR_TEST
         }
 
         [Serializable]
