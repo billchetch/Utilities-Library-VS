@@ -46,7 +46,9 @@ namespace Chetch.Utilities
             STATUS_REQUEST,
             STATUS_RESPONSE,
             COMMAND,
-            ERROR_TEST
+            ERROR_TEST,
+            ECHO,
+            ECHO_RESPONSE
         }
 
         [Serializable]
@@ -157,6 +159,38 @@ namespace Chetch.Utilities
 
                 var serializer = new XmlSerializer(typeof(T));
                 return (T)serializer.Deserialize(stream);
+            }
+
+
+            virtual protected String ToStringHeader()
+            {
+                String lf = Environment.NewLine;
+                String s = "ID: " + ID + lf;
+                s += "Target: " + Target + lf;
+                s += "Response ID: " + ResponseID + lf;
+                s += "Sender: " + Sender + lf;
+                s += "Type: " + Type;
+                return s;
+            }
+
+            virtual protected String ToStringValues()
+            {
+                String lf = Environment.NewLine;
+                String s = "Values: " + lf;
+                foreach (var v in Values)
+                {
+                    s += v + lf;
+                }
+
+                return s;
+            }
+
+            override public String ToString()
+            {
+                String lf = Environment.NewLine;
+                String s = ToStringHeader();
+                s += lf + ToStringValues();
+                return s;
             }
         }
 
