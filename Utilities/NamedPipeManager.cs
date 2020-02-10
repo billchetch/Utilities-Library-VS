@@ -52,6 +52,13 @@ namespace Chetch.Utilities
         }
 
         [Serializable]
+        public class MessageValue
+        {
+            public String Key;
+            public Object Value;
+        }
+
+        [Serializable]
         public class Message
         {
             public String ID;
@@ -60,23 +67,16 @@ namespace Chetch.Utilities
             public String Sender; //normally the name of the 'inbound' pipe that will be listening for responses (this can be different from the 'outbound' pipe that the message is being sent down)
             public MessageType Type;
             public int SubType;
-            public List<String> Values = new List<string>();
+            public List<MessageValue> Values = new List<MessageValue>();
             public String Value
             {
                 get
                 {
-                    return Values.Count > 0 ? Values[0] : null;
+                    return Values.Count > 0 ? GetString("Value") : null;
                 }
                 set
                 {
-                    if (Values.Count > 0)
-                    {
-                        Values[0] = value;
-                    }
-                    else
-                    {
-                        Add(value);
-                    }
+                    AddValue("Value", value);
                 }
             }
 
@@ -95,7 +95,7 @@ namespace Chetch.Utilities
             public Message(String message, int subType = 0, MessageType type = MessageType.NOT_SET)
             {
                 ID = CreateID();
-                Add(message);
+                Value = message;
                 SubType = subType;
                 Type = type;
             }
@@ -110,14 +110,62 @@ namespace Chetch.Utilities
                 return System.Diagnostics.Process.GetCurrentProcess().Id.ToString() + "-" + this.GetHashCode() + "-" + DateTime.Now.ToString("yyyyMMddHHmmssffff");
             }
 
-            public void Add(String s)
+            public void AddValue(String key, Object value)
             {
-                Values.Add(s);
+                var key2cmp = key.ToLower();
+                foreach (var v in Values)
+                {
+                    if (v.Key.ToLower() == key2cmp)
+                    {
+                        v.Value = value;
+                        return;
+                    }
+                }
+
+                //if here then there is no existing value
+                var mv = new MessageValue();
+                mv.Key = key;
+                mv.Value = value;
+                Values.Add(mv);
+            }
+
+            public Object GetValue(String key)
+            {
+                var key2cmp = key.ToLower();
+                foreach (var v in Values)
+                {
+                    if (v.Key.ToLower() == key2cmp)
+                    {
+                        return v.Value;
+                    }
+                }
+                throw new Exception("No value found for key " + key);
+            }
+
+            public String GetString(String key)
+            {
+                return (String)GetValue(key);
             }
 
             public void Clear()
             {
                 Values.Clear();
+            }
+
+            public String GetQueryString()
+            {
+                Dictionary<String, Object> vals = new Dictionary<String, Object>();
+                vals.Add("ID", ID);
+                vals.Add("ResonseID", ResponseID);
+                vals.Add("Target", Target);
+                vals.Add("Sender", Sender);
+                vals.Add("Type", Type);
+                vals.Add("SubType", SubType);
+                foreach(var mv in Values)
+                {
+                    vals.Add(mv.Key, mv.Value);
+                }
+                return Convert.ToQueryString(vals);
             }
             
             public String GetXML()
@@ -179,7 +227,7 @@ namespace Chetch.Utilities
                 String s = "Values: " + lf;
                 foreach (var v in Values)
                 {
-                    s += v + lf;
+                    s += v.Key + " = " + v.Value + lf;
                 }
 
                 return s;

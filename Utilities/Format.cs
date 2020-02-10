@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Chetch.Utilities
@@ -24,6 +25,17 @@ namespace Chetch.Utilities
             }
 
             return s2;
+        }
+
+        public static String RemoveRepeatWhiteSpace(String s)
+        {
+            if (s == null || s == "") return s;
+
+            String r = s.Trim();
+            RegexOptions options = RegexOptions.None;
+            Regex regex = new Regex("[ ]{2,}", options);
+            r = regex.Replace(r, " ");
+            return r;
         }
     }
 }
