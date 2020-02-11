@@ -35,5 +35,50 @@ namespace Chetch.Utilities
         {
             return ToNameValuePairsString(vals, "&", true);
         }
+
+        public static Dictionary<String, Object> ToNameValuePairs(String s, char delimiter, Boolean urldecode)
+        {
+            var nvp = new Dictionary<String, Object>();
+            if(s != null)
+            {
+                var nvps = s.Split(delimiter);
+                foreach(var nv in nvps)
+                {
+                    var anv = nv.Split('=');
+                    if(anv.Length > 0)
+                    {
+                        String key = urldecode ? HttpUtility.UrlDecode(anv[0]) : anv[0];
+                        nvp.Add(key, anv.Length > 1 ? (urldecode ? HttpUtility.UrlDecode(anv[1]) : anv[1]) : null);
+                    }
+                }
+            }
+
+            return nvp;
+        }
+
+        public static Dictionary<String, Object> ParseQueryString(String s)
+        {
+            return ToNameValuePairs(s, '&', true);
+        }
+
+        public static void AssignValue<T>(ref T p, String key, Dictionary<String, Object> vals, bool remove)
+        {
+            if (vals.ContainsKey(key))
+            {
+                if (p is int)
+                {
+                    p = (T)(Object)Int32.Parse((String)vals[key]);
+                }
+                else
+                {
+                    p = (T)vals[key];
+                }
+
+                if (remove)
+                {
+                    vals.Remove(key);
+                }
+            }
+        }
     }
 }

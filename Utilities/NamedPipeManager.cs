@@ -51,6 +51,12 @@ namespace Chetch.Utilities
             ECHO_RESPONSE
         }
 
+        public enum MessageEncoding
+        {
+            XML,
+            QUERY_STRING
+        }
+
         [Serializable]
         public class MessageValue
         {
@@ -129,6 +135,14 @@ namespace Chetch.Utilities
                 Values.Add(mv);
             }
 
+            public void AddValues(Dictionary<String, Object> vals)
+            {
+                foreach(var entry in vals)
+                {
+                    AddValue(entry.Key, entry.Value);
+                }
+            }
+
             public Object GetValue(String key)
             {
                 var key2cmp = key.ToLower();
@@ -152,11 +166,14 @@ namespace Chetch.Utilities
                 Values.Clear();
             }
 
-            public String GetQueryString()
+            public String GetQueryString(Dictionary<String, Object> vals = null)
             {
-                Dictionary<String, Object> vals = new Dictionary<String, Object>();
+                if (vals == null)
+                {
+                    vals = new Dictionary<String, Object>();
+                }
                 vals.Add("ID", ID);
-                vals.Add("ResonseID", ResponseID);
+                vals.Add("ResponseID", ResponseID);
                 vals.Add("Target", Target);
                 vals.Add("Sender", Sender);
                 vals.Add("Type", Type);
@@ -167,6 +184,7 @@ namespace Chetch.Utilities
                 }
                 return Convert.ToQueryString(vals);
             }
+
             
             public String GetXML()
             {
@@ -196,19 +214,84 @@ namespace Chetch.Utilities
                 stream.WriteLine(xmlStr);
             }
 
-            public static T Deserialize<T>(String s)
+            public String Serialize()
             {
-                byte[] byteArray = Encoding.UTF8.GetBytes(s);
-                var stream = new MemoryStream(byteArray);
-                var writer = new StreamWriter(stream);
-                writer.Write(s);
-                writer.Flush();
-                stream.Position = 0;
-
-                var serializer = new XmlSerializer(typeof(T));
-                return (T)serializer.Deserialize(stream);
+                var qsStr = GetQueryString();
+                return qsStr;
             }
 
+            public static T Deserialize<T>(String s, MessageEncoding encoding = MessageEncoding.XML) where T : Message, new()
+            {
+                T t;
+                switch (encoding)
+                {
+                    case MessageEncoding.XML:
+                        byte[] byteArray = Encoding.UTF8.GetBytes(s);
+                        var stream = new MemoryStream(byteArray);
+                        var writer = new StreamWriter(stream);
+                        writer.Write(s);
+                        writer.Flush();
+                        stream.Position = 0;
+
+                        var serializer = new XmlSerializer(typeof(T));
+                        t = (T)serializer.Deserialize(stream);
+                        break;
+
+                    case MessageEncoding.QUERY_STRING:
+                        t = new T();
+                        break;
+
+                    default:
+                        throw new Exception("Unrecongnised encoding " + encoding);
+                }
+
+                if(t != null)
+                {
+                    t.OnDeserialize(s, encoding);
+                }
+                return t;
+            }
+
+
+            public void OnDeserialize(String s, MessageEncoding encoding)
+            {
+                switch (encoding)
+                {
+                    case MessageEncoding.XML:
+                        break;
+
+                    case MessageEncoding.QUERY_STRING:
+                        var vals = Convert.ParseQueryString(s);
+                        AssignValue<String>(ref ID, "ID", vals);
+                        AssignValue<String>(ref ResponseID, "ResponseID", vals);
+                        AssignValue<String>(ref Target, "Target", vals);
+                        AssignValue<String>(ref Sender, "Sender", vals);
+                        AssignValue<MessageType>(ref Type, "Type", vals);
+                        AssignValue<int>(ref SubType, "SubType", vals);
+                        AddValues(vals);
+                        break;
+
+                    default:
+                        throw new Exception("Unrecongnised encoding " + encoding);
+                }
+            }
+
+            public static void AssignValue<T>(ref T p, String key, Dictionary<String, Object> vals)
+            {
+                if (vals.ContainsKey(key))
+                {
+                    if (p is MessageType)
+                    {
+                        p = (T)Enum.Parse(typeof(T), String)vals[key]);
+                    }
+                    else
+                    {
+                        return Convert.AssignValue<T>(p, key, vals, true);
+                    }
+
+                    vals.Remove(key);
+                }
+            }
 
             virtual protected String ToStringHeader()
             {
