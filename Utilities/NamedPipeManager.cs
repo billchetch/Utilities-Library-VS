@@ -48,13 +48,16 @@ namespace Chetch.Utilities
             COMMAND,
             ERROR_TEST,
             ECHO,
-            ECHO_RESPONSE
+            ECHO_RESPONSE,
+            CONFIGURE
         }
 
         public enum MessageEncoding
         {
             XML,
-            QUERY_STRING
+            QUERY_STRING,
+            POSITONAL,
+            BYTES_ARRAY
         }
 
         [Serializable]
@@ -85,7 +88,7 @@ namespace Chetch.Utilities
                     AddValue("Value", value);
                 }
             }
-
+            
             public Message()
             {
                 ID = CreateID();
@@ -143,6 +146,19 @@ namespace Chetch.Utilities
                 }
             }
 
+            public bool HasValue(String key)
+            {
+                try
+                {
+                    GetValue(key);
+                    return true;
+                }
+                catch (Exception)
+                { 
+                    return false;
+                }
+            }
+
             public Object GetValue(String key)
             {
                 var key2cmp = key.ToLower();
@@ -161,17 +177,19 @@ namespace Chetch.Utilities
                 return (String)GetValue(key);
             }
 
+            public int GetInt(String key)
+            {
+                return System.Convert.ToInt32(GetValue(key));
+            }
+
             public void Clear()
             {
                 Values.Clear();
             }
 
-            public String GetQueryString(Dictionary<String, Object> vals = null)
+
+            virtual public String GetQueryString(Dictionary<String, Object> vals)
             {
-                if (vals == null)
-                {
-                    vals = new Dictionary<String, Object>();
-                }
                 vals.Add("ID", ID);
                 vals.Add("ResponseID", ResponseID);
                 vals.Add("Target", Target);
@@ -185,8 +203,12 @@ namespace Chetch.Utilities
                 return Convert.ToQueryString(vals);
             }
 
-            
-            public String GetXML()
+            virtual public void AddBytes(List<byte> bytes)
+            {
+                bytes.Add((byte)Type);
+            }
+
+            virtual public String GetXML()
             {
                 XmlWriterSettings settings = new XmlWriterSettings();
                 settings.Indent = false;
@@ -214,10 +236,28 @@ namespace Chetch.Utilities
                 stream.WriteLine(xmlStr);
             }
 
-            public String Serialize()
+            public String Serialize(MessageEncoding encoding)
             {
-                var qsStr = GetQueryString();
-                return qsStr;
+                String serialized = null;
+                switch (encoding)
+                {
+                    case MessageEncoding.QUERY_STRING:
+                        serialized = GetQueryString(new Dictionary<String, Object>());
+                        break;
+
+                    case MessageEncoding.BYTES_ARRAY:
+                        var bytes = new List<byte>();
+                        AddBytes(bytes);
+                        serialized = Convert.ToString(bytes.ToArray());
+                        break;
+
+                    default:
+                        throw new Exception("Unable to serialize encoding " + encoding);
+                        break;
+                }
+
+                return serialized;
+                
             }
 
             public static T Deserialize<T>(String s, MessageEncoding encoding = MessageEncoding.XML) where T : Message, new()
@@ -238,6 +278,10 @@ namespace Chetch.Utilities
                         break;
 
                     case MessageEncoding.QUERY_STRING:
+                        t = new T();
+                        break;
+
+                    case MessageEncoding.BYTES_ARRAY:
                         t = new T();
                         break;
 
@@ -271,6 +315,9 @@ namespace Chetch.Utilities
                         AddValues(vals);
                         break;
 
+                    case MessageEncoding.BYTES_ARRAY:
+                        break;
+
                     default:
                         throw new Exception("Unrecongnised encoding " + encoding);
                 }
@@ -282,14 +329,12 @@ namespace Chetch.Utilities
                 {
                     if (p is MessageType)
                     {
-                        p = (T)Enum.Parse(typeof(T), String)vals[key]);
+                        p = (T)(Object)Int32.Parse((String)vals[key]);
                     }
                     else
                     {
-                        return Convert.AssignValue<T>(p, key, vals, true);
+                        Convert.AssignValue<T>(ref p, key, vals, true);
                     }
-
-                    vals.Remove(key);
                 }
             }
 

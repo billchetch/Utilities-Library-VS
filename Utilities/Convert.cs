@@ -80,5 +80,125 @@ namespace Chetch.Utilities
                 }
             }
         }
-    }
+
+        public static void AssignValue<T>(ref T p, int position, Object[] vals, bool remove = false)
+        {
+            if (position < vals.Length)
+            {
+                if (p is int)
+                {
+                    p = (T)(Object)Int32.Parse((String)vals[position]);
+                }
+                else
+                {
+                    p = (T)vals[position];
+                }
+
+                if (remove)
+                {
+                    //TODO
+                }
+            }
+        }
+
+        public static String ToString(byte[] bytes)
+        {
+            char[] chars = new char[bytes.Length];
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                chars[i] = (char)bytes[i];
+            }
+            return new string(chars);
+        }
+
+        public static byte[] ToBytes(String s)
+        {
+            byte[] bytes = new byte[s.Length];
+            for (int i = 0; i < s.Length; i++)
+            {
+                bytes[i] = (byte)s[i];
+            }
+            return bytes;
+        }
+
+        public static byte[] ToBytes(ValueType n, bool removeZeroBytePadding = true)
+        {
+            return ToBytes(n, BitConverter.IsLittleEndian, removeZeroBytePadding);
+        }
+
+        public static byte[] ToBytes(ValueType n, bool littleEndian, bool removeZeroBytePadding = true)
+        {
+            int sz = System.Runtime.InteropServices.Marshal.SizeOf(n);
+            if (sz <= sizeof(System.Int64))
+            {
+                return ToBytes(System.Convert.ToInt64(n), littleEndian, removeZeroBytePadding);
+            }
+            else
+            {
+                throw new Exception("Size of variable is larger than the system long size of " + sizeof(long));
+            }
+        }
+
+        public static byte[] ToBytes(Int64 n)
+        {
+            return ToBytes(n, BitConverter.IsLittleEndian);
+        }
+
+        public static byte[] ToBytes(Int64 n, bool littleEndian, bool removeZeroBytePadding = true)
+        {
+            var bytes = BitConverter.GetBytes(n);
+
+            if ((BitConverter.IsLittleEndian && !littleEndian) || (!BitConverter.IsLittleEndian && littleEndian))
+            {
+                Array.Reverse(bytes);
+            }
+
+            if (removeZeroBytePadding)
+            {
+                //when n is Zero or when the 'end' byte is non-zero
+                if (n == 0) return new byte[] { (byte)0 };
+                if (bytes[littleEndian ? bytes.Length - 1 : 0] != 0) return bytes;
+
+                //first significatng byte is not at either end of the array
+                int idx = -1;
+                for (int i = 0; i < bytes.Length; i++)
+                {
+                    idx = littleEndian ? bytes.Length - 1 - i : i;
+                    if (bytes[idx] != 0)
+                    {
+                        break;
+                    }
+                }
+
+                int startIdx = littleEndian ? 0 : idx;
+                int endIdx = littleEndian ? idx : bytes.Length - 1;
+                var bts = new byte[1 + (endIdx - startIdx)];
+                for (int i = startIdx; i <= endIdx; i++)
+                {
+                    bts[i - startIdx] = bytes[i];
+                }
+                bytes = bts;
+            }
+
+            return bytes;
+        }
+
+        public static bool ToBoolean(Object obj)
+        {
+            bool b = false;
+
+            try
+            {
+                b = System.Convert.ToBoolean(obj);
+            }
+            catch (System.FormatException)
+            {
+                int i = System.Convert.ToInt16(obj);
+                b = System.Convert.ToBoolean(i);
+            }
+
+            return b;
+        }
+
+    } //end of class 
 }
