@@ -50,7 +50,8 @@ namespace Chetch.Utilities
             ECHO,
             ECHO_RESPONSE,
             CONFIGURE,
-            RESET
+            RESET,
+            INITIALISE
         }
 
         public enum MessageEncoding
