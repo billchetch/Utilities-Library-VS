@@ -49,7 +49,8 @@ namespace Chetch.Utilities
             ERROR_TEST,
             ECHO,
             ECHO_RESPONSE,
-            CONFIGURE
+            CONFIGURE,
+            RESET
         }
 
         public enum MessageEncoding
