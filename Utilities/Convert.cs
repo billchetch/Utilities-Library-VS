@@ -200,5 +200,10 @@ namespace Chetch.Utilities
             return b;
         }
 
+        public static byte ToByte(Object obj)
+        {
+            return (byte)System.Convert.ToInt16(obj);
+        }
+
     } //end of class 
 }

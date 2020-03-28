@@ -51,7 +51,8 @@ namespace Chetch.Utilities
             ECHO_RESPONSE,
             CONFIGURE,
             RESET,
-            INITIALISE
+            INITIALISE,
+            DATA
         }
 
         public enum MessageEncoding
@@ -148,6 +149,11 @@ namespace Chetch.Utilities
                 }
             }
 
+            public bool HasValue()
+            {
+                return HasValue("Value");
+            }
+
             public bool HasValue(String key)
             {
                 try
@@ -182,6 +188,11 @@ namespace Chetch.Utilities
             public int GetInt(String key)
             {
                 return System.Convert.ToInt32(GetValue(key));
+            }
+
+            public byte GetByte(String key)
+            {
+                return (byte)GetInt(key);
             }
 
             public void Clear()
