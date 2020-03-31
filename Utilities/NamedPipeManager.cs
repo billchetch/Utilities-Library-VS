@@ -50,6 +50,7 @@ namespace Chetch.Utilities
             ECHO,
             ECHO_RESPONSE,
             CONFIGURE,
+            CONFIGURE_RESPONSE,
             RESET,
             INITIALISE,
             DATA
@@ -158,8 +159,7 @@ namespace Chetch.Utilities
             {
                 try
                 {
-                    GetValue(key);
-                    return true;
+                    return GetValue(key) != null;
                 }
                 catch (Exception)
                 { 
@@ -167,8 +167,19 @@ namespace Chetch.Utilities
                 }
             }
 
+            public bool HasValues(params String[] keys)
+            {
+                foreach(var key in keys)
+                {
+                    if (!HasValue(key)) return false;
+                }
+                return true;
+            }
+
             public Object GetValue(String key)
             {
+                if (key == null || key.Length == 0) return null;
+
                 var key2cmp = key.ToLower();
                 foreach (var v in Values)
                 {
@@ -188,6 +199,11 @@ namespace Chetch.Utilities
             public int GetInt(String key)
             {
                 return System.Convert.ToInt32(GetValue(key));
+            }
+
+            public long GetLong(String key)
+            {
+                return System.Convert.ToInt64(GetValue(key));
             }
 
             public byte GetByte(String key)
