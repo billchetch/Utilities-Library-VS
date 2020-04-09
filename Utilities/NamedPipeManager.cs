@@ -53,7 +53,9 @@ namespace Chetch.Utilities
             CONFIGURE_RESPONSE,
             RESET,
             INITIALISE,
-            DATA
+            DATA,
+            CONNECTION_REQUEST,
+            CONNECTION_REQUEST_RESPONSE
         }
 
         public enum MessageEncoding
@@ -61,7 +63,8 @@ namespace Chetch.Utilities
             XML,
             QUERY_STRING,
             POSITONAL,
-            BYTES_ARRAY
+            BYTES_ARRAY,
+            JSON
         }
 
         [Serializable]
@@ -92,7 +95,9 @@ namespace Chetch.Utilities
                     AddValue("Value", value);
                 }
             }
-            
+            public MessageEncoding DefaultEncoding { get; set; } = MessageEncoding.JSON;
+
+
             public Message()
             {
                 ID = CreateID();
@@ -144,7 +149,7 @@ namespace Chetch.Utilities
 
             public void AddValues(Dictionary<String, Object> vals)
             {
-                foreach(var entry in vals)
+                foreach (var entry in vals)
                 {
                     AddValue(entry.Key, entry.Value);
                 }
@@ -162,14 +167,14 @@ namespace Chetch.Utilities
                     return GetValue(key) != null;
                 }
                 catch (Exception)
-                { 
+                {
                     return false;
                 }
             }
 
             public bool HasValues(params String[] keys)
             {
-                foreach(var key in keys)
+                foreach (var key in keys)
                 {
                     if (!HasValue(key)) return false;
                 }
@@ -225,7 +230,7 @@ namespace Chetch.Utilities
                 vals.Add("Sender", Sender);
                 vals.Add("Type", Type);
                 vals.Add("SubType", SubType);
-                foreach(var mv in Values)
+                foreach (var mv in Values)
                 {
                     vals.Add(mv.Key, mv.Value);
                 }
@@ -259,17 +264,42 @@ namespace Chetch.Utilities
                 return xmlStr;
             }
 
+            virtual public String GetJSON(Dictionary<String, Object> vals)
+            {
+                vals.Add("ID", ID);
+                vals.Add("ResponseID", ResponseID);
+                vals.Add("Target", Target);
+                vals.Add("Sender", Sender);
+                vals.Add("Type", Type);
+                vals.Add("SubType", SubType);
+                foreach (var mv in Values)
+                {
+                    vals.Add(mv.Key, mv.Value);
+                }
+
+                var jsonSerializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+                return jsonSerializer.Serialize(vals);
+            }
+
             public void Serialize(StreamWriter stream)
             {
                 var xmlStr = GetXML();
                 stream.WriteLine(xmlStr);
             }
 
-            public String Serialize(MessageEncoding encoding)
+            public String Serialize(MessageEncoding encoding = MessageEncoding.JSON)
             {
                 String serialized = null;
                 switch (encoding)
                 {
+                    case MessageEncoding.XML:
+                        serialized = GetXML();
+                        break;
+
+                    case MessageEncoding.JSON:
+                        serialized = GetJSON(new Dictionary<String, Object>());
+                        break;
+
                     case MessageEncoding.QUERY_STRING:
                         serialized = GetQueryString(new Dictionary<String, Object>());
                         break;
@@ -286,7 +316,12 @@ namespace Chetch.Utilities
                 }
 
                 return serialized;
-                
+
+            }
+
+            virtual public String Serialize()
+            {
+                return Serialize(DefaultEncoding);
             }
 
             public static T Deserialize<T>(String s, MessageEncoding encoding = MessageEncoding.XML) where T : Message, new()
@@ -306,6 +341,10 @@ namespace Chetch.Utilities
                         t = (T)serializer.Deserialize(stream);
                         break;
 
+                    case MessageEncoding.JSON:
+                        t = new T();
+                        break;
+
                     case MessageEncoding.QUERY_STRING:
                         t = new T();
                         break;
@@ -318,23 +357,41 @@ namespace Chetch.Utilities
                         throw new Exception("Unrecongnised encoding " + encoding);
                 }
 
-                if(t != null)
+                if (t != null)
                 {
                     t.OnDeserialize(s, encoding);
                 }
                 return t;
             }
 
+            //if no type required for deserializing then no need to default to XML as no class type data is parsed for JSON
+            public static Message Deserialize(String s, MessageEncoding encoding = MessageEncoding.JSON)
+            {
+                return Deserialize<Message>(s, encoding);
+            }
 
             public void OnDeserialize(String s, MessageEncoding encoding)
             {
+                Dictionary<String, Object> vals;
                 switch (encoding)
                 {
                     case MessageEncoding.XML:
                         break;
 
+                    case MessageEncoding.JSON:
+                        var jsonSerializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+                        vals = jsonSerializer.Deserialize<Dictionary<String,Object>>(s);
+                        AssignValue<String>(ref ID, "ID", vals);
+                        AssignValue<String>(ref ResponseID, "ResponseID", vals);
+                        AssignValue<String>(ref Target, "Target", vals);
+                        AssignValue<String>(ref Sender, "Sender", vals);
+                        AssignValue<MessageType>(ref Type, "Type", vals);
+                        AssignValue<int>(ref SubType, "SubType", vals);
+                        AddValues(vals);
+                        break;
+
                     case MessageEncoding.QUERY_STRING:
-                        var vals = Convert.ParseQueryString(s);
+                        vals = Convert.ParseQueryString(s);
                         AssignValue<String>(ref ID, "ID", vals);
                         AssignValue<String>(ref ResponseID, "ResponseID", vals);
                         AssignValue<String>(ref Target, "Target", vals);
@@ -358,7 +415,7 @@ namespace Chetch.Utilities
                 {
                     if (p is MessageType)
                     {
-                        p = (T)(Object)Int32.Parse((String)vals[key]);
+                        p = (T)(Object)Int32.Parse(vals[key].ToString());
                     }
                     else
                     {

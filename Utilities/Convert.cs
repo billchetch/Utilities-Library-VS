@@ -67,7 +67,7 @@ namespace Chetch.Utilities
             {
                 if (p is int)
                 {
-                    p = (T)(Object)Int32.Parse((String)vals[key]);
+                    p = (T)(Object)Int32.Parse(vals[key].ToString());
                 }
                 else
                 {
@@ -87,7 +87,7 @@ namespace Chetch.Utilities
             {
                 if (p is int)
                 {
-                    p = (T)(Object)Int32.Parse((String)vals[position]);
+                    p = (T)(Object)Int32.Parse(vals[position].ToString());
                 }
                 else
                 {
