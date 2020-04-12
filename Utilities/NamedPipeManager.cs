@@ -55,7 +55,8 @@ namespace Chetch.Utilities
             INITIALISE,
             DATA,
             CONNECTION_REQUEST,
-            CONNECTION_REQUEST_RESPONSE
+            CONNECTION_REQUEST_RESPONSE,
+            SHUTDOWN
         }
 
         public enum MessageEncoding
