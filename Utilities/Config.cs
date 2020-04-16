@@ -141,7 +141,11 @@ namespace Chetch.Utilities.Config
 
         static private Dictionary<String, TraceSourceData> _traceSources = null;
 
-
+        /// <summary>
+        /// This will instantiate trace sources and then trace this to the specified source.  Pass null if you don't want to trace.
+        /// </summary>
+        /// <param name="traceTo"></param>
+        /// <param name="eventId"></param>
         static public void InitFromAppConfig(String traceTo, int eventId = 0)
         {
             AppConfig.ReadConfig();
@@ -169,6 +173,11 @@ namespace Chetch.Utilities.Config
 
         static public TraceSource GetInstance(String name, bool createIfNotFound = false)
         {
+            if (_traceSources == null) //not yet initialised from app config, so initialise
+            {
+                InitFromAppConfig(null);
+            }
+
             if (!_traceSources.ContainsKey(name))
             {
                 if (createIfNotFound)
