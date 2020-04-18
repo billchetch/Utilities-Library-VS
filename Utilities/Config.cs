@@ -120,14 +120,14 @@ namespace Chetch.Utilities.Config
                 }
             }
 
-            public void SetListenerSourceLevel(String listenerName, SourceLevels level)
+            public void SetListenerTraceLevel(String listenerName, SourceLevels level)
             {
                 SetListenerFilter(listenerName, new EventTypeFilter(level));
             }
 
             public void TurnOffListener(String listenerName)
             {
-                SetListenerSourceLevel(listenerName, SourceLevels.Off);
+                SetListenerTraceLevel(listenerName, SourceLevels.Off);
             }
 
             public void RestoreListenerFilter(String listenerName)
@@ -139,14 +139,14 @@ namespace Chetch.Utilities.Config
             }
         }
 
-        static private Dictionary<String, TraceSourceData> _traceSources = null;
+        static private List<TraceSourceData> _traceSources = new List<TraceSourceData>();
 
         /// <summary>
         /// This will instantiate trace sources and then trace this to the specified source.  Pass null if you don't want to trace.
         /// </summary>
         /// <param name="traceTo"></param>
         /// <param name="eventId"></param>
-        static public void InitFromAppConfig(String traceTo, int eventId = 0)
+        /*static public void InitFromAppConfig(String traceTo, int eventId = 0)
         {
             AppConfig.ReadConfig();
 
@@ -169,52 +169,99 @@ namespace Chetch.Utilities.Config
                     ts.TraceEvent(TraceEventType.Information, eventId, o);
                 }
             }
-        }
+        }*/
 
-        static public TraceSource GetInstance(String name, bool createIfNotFound = false)
+        static public TraceSource CreateInstance(String name)
         {
-            if (_traceSources == null) //not yet initialised from app config, so initialise
-            {
-                InitFromAppConfig(null);
-            }
-
-            if (!_traceSources.ContainsKey(name))
-            {
-                if (createIfNotFound)
-                {
-                    _traceSources[name] = new TraceSourceData(name);
-                }
-                else
-                {
-                    throw new Exception(String.Format("Source name {0} not found in config file"));
-                }
-            }
-            return _traceSources[name].TS;
+            var tsd = new TraceSourceData(name);
+            _traceSources.Add(tsd);
+            return tsd.TS;
         }
 
 
-
-        static public void SetListenersSourceLevel(String listenerName, SourceLevels level)
+        /// <summary>
+        /// Methods for individual trace sources
+        /// </summary>
+        /// <returns></returns>
+        static private TraceSourceData _GetDataFromInstance(TraceSource tsource)
         {
-            foreach (var ts in _traceSources.Values)
+            foreach (var tsd in _traceSources)
             {
-                ts.SetListenerSourceLevel(listenerName, level);
+                if (tsd.TS == tsource) return tsd;
+            }
+            return null;
+        }
+
+        static public List<String> GetListenerNames(TraceSource tsource)
+        {
+            var tsd = _GetDataFromInstance(tsource);
+            List<String> listenerNames = new List<String>();
+            foreach (var ln in tsd.Listeners.Keys)
+            {
+                listenerNames.Add(ln);
+            }
+            return listenerNames;
+        }
+
+        static public void SetListenersTraceLevel(TraceSource tsource, String listenerName, SourceLevels level)
+        {
+            var tsd = _GetDataFromInstance(tsource);
+            tsd.SetListenerTraceLevel(listenerName, level);
+        }
+
+        static public void TurnOffListeners(TraceSource tsource, String listenerName)
+        {
+            var tsd = _GetDataFromInstance(tsource);
+            tsd.TurnOffListener(listenerName);
+        }
+
+        static public void RestoreListeners(TraceSource tsource, String listenerName)
+        {
+            var tsd = _GetDataFromInstance(tsource);
+            tsd.RestoreListenerFilter(listenerName);
+        }
+
+        /// <summary>
+        /// Methods for all trace sources
+        /// </summary>
+        /// <returns></returns>
+        static public List<String> GetListenerNames()
+        {
+            List<String> listenerNames = new List<String>();
+            foreach (var tsd in _traceSources)
+            {
+                foreach(var ln in tsd.Listeners.Keys)
+                {
+                    if (!listenerNames.Contains(ln))
+                    {
+                        listenerNames.Add(ln);
+                    }
+                }
+            }
+            return listenerNames;
+        }
+
+        static public void SetListenersTraceLevel(String listenerName, SourceLevels level)
+        {
+            foreach (var tsd in _traceSources)
+            {
+                tsd.SetListenerTraceLevel(listenerName, level);
             }
         }
 
         static public void TurnOffListeners(String listenerName)
         {
-            foreach (var ts in _traceSources.Values)
+            foreach (var tsd in _traceSources)
             {
-                ts.TurnOffListener(listenerName);
+                tsd.TurnOffListener(listenerName);
             }
         }
 
         static public void RestoreListeners(String listenerName)
         {
-            foreach (var ts in _traceSources.Values)
+            foreach (var tsd in _traceSources)
             {
-                ts.RestoreListenerFilter(listenerName);
+                tsd.RestoreListenerFilter(listenerName);
             }
         }
     } //end TraceSourceManager class
