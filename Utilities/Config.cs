@@ -139,14 +139,16 @@ namespace Chetch.Utilities.Config
             }
         }
 
-        static private List<TraceSourceData> _traceSources = new List<TraceSourceData>();
+        static private Dictionary<String, TraceSourceData> _traceSources = null;
 
         /// <summary>
         /// This will instantiate trace sources and then trace this to the specified source.  Pass null if you don't want to trace.
+        /// Note that trace sources of the same name share the same Listeners, so they are effectively distinguished by name rather than instance
+        /// hence keeping them in a dictionary
         /// </summary>
         /// <param name="traceTo"></param>
         /// <param name="eventId"></param>
-        /*static public void InitFromAppConfig(String traceTo, int eventId = 0)
+        static public void InitFromAppConfig(String traceTo, int eventId = 0)
         {
             AppConfig.ReadConfig();
 
@@ -169,57 +171,23 @@ namespace Chetch.Utilities.Config
                     ts.TraceEvent(TraceEventType.Information, eventId, o);
                 }
             }
-        }*/
-
-        static public TraceSource CreateInstance(String name)
-        {
-            var tsd = new TraceSourceData(name);
-            _traceSources.Add(tsd);
-            return tsd.TS;
         }
 
-
-        /// <summary>
-        /// Methods for individual trace sources
-        /// </summary>
-        /// <returns></returns>
-        static private TraceSourceData _GetDataFromInstance(TraceSource tsource)
+        static public TraceSource GetInstance(String name)
         {
-            foreach (var tsd in _traceSources)
+            if (_traceSources == null)
             {
-                if (tsd.TS == tsource) return tsd;
+                _traceSources = new Dictionary<String, TraceSourceData>();
             }
-            return null;
-        }
 
-        static public List<String> GetListenerNames(TraceSource tsource)
-        {
-            var tsd = _GetDataFromInstance(tsource);
-            List<String> listenerNames = new List<String>();
-            foreach (var ln in tsd.Listeners.Keys)
+            if (!_traceSources.ContainsKey(name))
             {
-                listenerNames.Add(ln);
+                _traceSources[name] = new TraceSourceData(name);
             }
-            return listenerNames;
+
+            return _traceSources[name].TS;
         }
 
-        static public void SetListenersTraceLevel(TraceSource tsource, String listenerName, SourceLevels level)
-        {
-            var tsd = _GetDataFromInstance(tsource);
-            tsd.SetListenerTraceLevel(listenerName, level);
-        }
-
-        static public void TurnOffListeners(TraceSource tsource, String listenerName)
-        {
-            var tsd = _GetDataFromInstance(tsource);
-            tsd.TurnOffListener(listenerName);
-        }
-
-        static public void RestoreListeners(TraceSource tsource, String listenerName)
-        {
-            var tsd = _GetDataFromInstance(tsource);
-            tsd.RestoreListenerFilter(listenerName);
-        }
 
         /// <summary>
         /// Methods for all trace sources
@@ -228,7 +196,7 @@ namespace Chetch.Utilities.Config
         static public List<String> GetListenerNames()
         {
             List<String> listenerNames = new List<String>();
-            foreach (var tsd in _traceSources)
+            foreach (var tsd in _traceSources.Values)
             {
                 foreach(var ln in tsd.Listeners.Keys)
                 {
@@ -243,7 +211,7 @@ namespace Chetch.Utilities.Config
 
         static public void SetListenersTraceLevel(String listenerName, SourceLevels level)
         {
-            foreach (var tsd in _traceSources)
+            foreach (var tsd in _traceSources.Values)
             {
                 tsd.SetListenerTraceLevel(listenerName, level);
             }
@@ -251,7 +219,7 @@ namespace Chetch.Utilities.Config
 
         static public void TurnOffListeners(String listenerName)
         {
-            foreach (var tsd in _traceSources)
+            foreach (var tsd in _traceSources.Values)
             {
                 tsd.TurnOffListener(listenerName);
             }
@@ -259,7 +227,7 @@ namespace Chetch.Utilities.Config
 
         static public void RestoreListeners(String listenerName)
         {
-            foreach (var tsd in _traceSources)
+            foreach (var tsd in _traceSources.Values)
             {
                 tsd.RestoreListenerFilter(listenerName);
             }
