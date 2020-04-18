@@ -140,11 +140,11 @@ namespace Chetch.Utilities.Config
         }
 
         static private Dictionary<String, TraceSourceData> _traceSources = null;
-
+        
         /// <summary>
         /// This will instantiate trace sources and then trace this to the specified source.  Pass null if you don't want to trace.
         /// Note that trace sources of the same name share the same Listeners, so they are effectively distinguished by name rather than instance
-        /// hence keeping them in a dictionary
+        /// hence keeping them in a dictionary andnot a list
         /// </summary>
         /// <param name="traceTo"></param>
         /// <param name="eventId"></param>
@@ -188,6 +188,55 @@ namespace Chetch.Utilities.Config
             return _traceSources[name].TS;
         }
 
+        
+        private static TraceSourceData GetTraceSourceData(String tsName)
+        {
+            if (!_traceSources.ContainsKey(tsName))
+            {
+                throw new Exception(String.Format("Cannot find TraceSoure {0}", tsName));
+            }
+            return _traceSources[tsName];
+        }
+
+        /// <summary>
+        /// Methods for all trace sources
+        /// </summary>
+        /// <returns></returns>
+        //static public List<String> GetListenerNames(String tsName)
+        static public List<String> GetListenerNames(String tsname)
+        {
+            List<String> listenerNames = new List<String>();
+            var tsd = GetTraceSourceData(tsname);
+            foreach (var ln in tsd.Listeners.Keys)
+            {
+                if (!listenerNames.Contains(ln))
+                {
+                        listenerNames.Add(ln);
+                }
+            }
+            return listenerNames;
+        }
+
+        //static public void SetListenersTraceLevel(String tsName, String listenerName, SourceLevels level)
+        static public void SetListenersTraceLevel(String tsname, String listenerName, SourceLevels level)
+        {
+            var tsd = GetTraceSourceData(tsname);
+            tsd.SetListenerTraceLevel(listenerName, level);
+        }
+
+        //static public void TurnOffListeners(String tsName, String listenerName)
+        static public void TurnOffListeners(String tsname, String tsName, String listenerName)
+        {
+            var tsd = GetTraceSourceData(tsname);
+            tsd.TurnOffListener(listenerName);
+        }
+
+        //static public void RestoreListeners(String tsName, String listenerName)
+        static public void RestoreListeners(String tsname, String listenerName)
+        {
+            var tsd = GetTraceSourceData(tsname);
+            tsd.RestoreListenerFilter(listenerName);
+        }
 
         /// <summary>
         /// Methods for all trace sources
