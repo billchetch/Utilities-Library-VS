@@ -81,7 +81,8 @@ namespace Chetch.Utilities.Config
                     EventLog.CreateEventSource(source, logName);
                     //Console.WriteLine("Creating source " + source + " for log " + logName);
                     EventLog.WriteEntry(source, "Created source");
-                    requiresRestart = true;
+                    requiresRestart = true; //each new source requires application restart so registry can be updated.
+                    break;
                 }
             }
 
