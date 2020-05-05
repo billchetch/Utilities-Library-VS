@@ -44,9 +44,21 @@ namespace Chetch.Utilities
                 var nvps = s.Split(delimiter);
                 foreach(var nv in nvps)
                 {
-                    var anv = nv.Split('=');
+                    var anv = nv.Split('='); //assume the equals sign is used to separate key and value
                     if(anv.Length > 0)
                     {
+                        if (urldecode)
+                        {
+                            if (!IsUrlEncoded(anv[0]))
+                            {
+                                throw new Exception(String.Format("{0} is not URL encoded", anv[0]));
+                            }
+                            if(anv.Length > 1 && !IsUrlEncoded(anv[1]))
+                            {
+                                throw new Exception(String.Format("{0} is not URL encoded", anv[1]));
+                            }
+                        }
+
                         String key = urldecode ? HttpUtility.UrlDecode(anv[0]) : anv[0];
                         nvp.Add(key, anv.Length > 1 ? (urldecode ? HttpUtility.UrlDecode(anv[1]) : anv[1]) : null);
                     }
@@ -61,6 +73,29 @@ namespace Chetch.Utilities
             return ToNameValuePairs(s, '&', true);
         }
 
+        public static bool IsUrlEncoded(String s)
+        {
+            try
+            {
+                var s1 = s.Replace("%20", "+");
+                var d1 = HttpUtility.UrlDecode(s1);
+                var e1 = HttpUtility.UrlEncode(d1);
+                if (e1.Length != s1.Length)
+                {
+                    return false;
+                }
+                else
+                {
+                    return e1.Equals(s1, StringComparison.OrdinalIgnoreCase);
+                }
+
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
         public static void AssignValue<T>(ref T p, String key, Dictionary<String, Object> vals, bool remove)
         {
             if (vals.ContainsKey(key))
@@ -69,7 +104,10 @@ namespace Chetch.Utilities
                 {
                     p = (T)(Object)Int32.Parse(vals[key].ToString());
                 }
-                else
+                else if(p is String)
+                {
+                    p = (T)(Object)vals[key].ToString();
+                } else
                 {
                     p = (T)vals[key];
                 }
