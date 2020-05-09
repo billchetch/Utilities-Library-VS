@@ -9,90 +9,83 @@ namespace Chetch.Utilities
 {
     public class DataSourceObject : INotifyPropertyChanged
     {
-        private Dictionary<String, Object> values = new Dictionary<String, Object>();
-
         public event PropertyChangedEventHandler PropertyChanged;
 
         public DateTime LastModified { get; set; }
+
+        private bool _raiseOnlyIfNotEqual = true;
+
+        public DataSourceObject(bool raiseIfNotEqual)
+        {
+            _raiseOnlyIfNotEqual = raiseIfNotEqual;
+        }
 
         public DataSourceObject()
         {
             //empty constructor
         }
 
-        public void InvokePropertyChanged(PropertyChangedEventArgs e)
+        private Dictionary<String, Object> _values = new Dictionary<String, Object>();
+
+        private void NotifyPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "")
         {
-            PropertyChangedEventHandler handler = PropertyChanged;
-            if (handler != null) handler(this, e);
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        public void InvokePropertyChanged(String propertyName)
+        private bool EqualValues(Object v1, Object v2)
         {
-            InvokePropertyChanged(new PropertyChangedEventArgs(propertyName));
+            if(v1 == null && v2 == null)
+            {
+                return true;
+            } else if(v1 == null)
+            {
+                return v2.Equals(v1);
+            } else
+            {
+                return v1.Equals(v2);
+            }
         }
 
-        public void ClearValues()
+        public void Set(Object value, [System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value", bool notify = true)
         {
-            values.Clear();
-        }
+            Object oldValue = _values.ContainsKey(propertyName) ? _values[propertyName] : null;
+            _values[propertyName] = value;
 
-        public void SetValue(String propertyName, Object value, bool notify = true)
-        {
-            values[propertyName] = value;
-            LastModified = DateTime.Now;
             if (notify)
             {
-                InvokePropertyChanged(propertyName);
+                if (!_raiseOnlyIfNotEqual)
+                {
+                    NotifyPropertyChanged(propertyName);
+                }
+                else if (!EqualValues(oldValue, value))
+                {
+                    NotifyPropertyChanged(propertyName);
+                }
             }
+            LastModified = DateTime.Now;
         }
 
-        public int GetIntValue(String propertyName)
+        public T Get<T>([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value")
         {
-            return values.ContainsKey(propertyName) ? (int)values[propertyName] : 0;
+            return _values.ContainsKey(propertyName) ? (T)_values[propertyName] : default(T);
         }
 
-        public String GetStringValue(String propertyName)
+        virtual public void Copy(DataSourceObject dso, bool notify = true)
         {
-            return values.ContainsKey(propertyName) ? (String)values[propertyName] : null;
-        }
-
-        public DateTime GetDateTimeValue(String propertyName)
-        {
-            return values.ContainsKey(propertyName) ? (DateTime)values[propertyName] : DateTime.MinValue;
-        }
-
-        public Object GetValue(String propertyName)
-        {
-            return values.ContainsKey(propertyName) ? values[propertyName] : null;
-        }
-
-        public void CopyValues(DataSourceObject dso, bool notify = true, bool clear = false)
-        {
-            if (clear)
+            foreach (var kvp in _values)
             {
-                dso.ClearValues();
-            }
-
-            foreach (var kvp in values)
-            {
-                dso.SetValue(kvp.Key, kvp.Value, notify);
+                dso.Set(kvp.Value, kvp.Key, notify);
             }
         }
 
-        public void CopyValue(DataSourceObject dso, String propertyName, bool notify = true)
+        public List<Object> GetValues()
         {
-            if (values.ContainsKey(propertyName))
-            {
-                dso.SetValue(propertyName, values[propertyName], notify);
-            }
+            return _values.Values.ToList();
         }
 
-        public void NotifyAll()
+        public List<String> GetPropertyNames()
         {
-            foreach(var k in values.Keys)
-            {
-                InvokePropertyChanged(k);
-            }
+            return _values.Keys.ToList();
         }
     }
 }
