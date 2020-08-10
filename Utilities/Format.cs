@@ -12,7 +12,7 @@ namespace Chetch.Utilities
     {
         public static String AddSlashes(String s)
         {
-            return s == null ? null : s.Replace("'", "\\'");
+            return s?.Replace("'", "\\'");
         }
 
         public static String[] AddSlashes(String[] s)
