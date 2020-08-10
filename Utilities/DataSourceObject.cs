@@ -87,5 +87,10 @@ namespace Chetch.Utilities
         {
             return _values.Keys.ToList();
         }
+
+        public bool HasProperty(String propertyName)
+        {
+            return _values.ContainsKey(propertyName);
+        }
     }
 }
