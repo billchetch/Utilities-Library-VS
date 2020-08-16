@@ -25,7 +25,7 @@ namespace Chetch.Utilities
                 foreach (String p in portList)
                 {
                     String[] parts = p.Split(':');
-                    if (parts.Length > 1 && parts[1].Contains(searchOn)) foundPorts.Add(parts[0]);
+                    if (parts.Length > 1 && parts[1].Contains(searchOn) && !foundPorts.Contains(parts[0])) foundPorts.Add(parts[0]);
                 }
             }
 
