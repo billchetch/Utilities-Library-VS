@@ -16,22 +16,28 @@ namespace Chetch.Utilities
 
     public class Sampler
     {
+        public enum SamplingOptions
+        {
+            MEAN,
+            MEAN_PRUNE_MIN_MAX
+        }
 
         class SubjectData
         {
             public ISampleSubject Subject;
             public int Interval = 0;
             public int SampleSize = 0;
-            List<double> Samples = new List<double>();
+            public List<double> Samples = new List<double>();
             public double Average { get; internal set; }
+            public SamplingOptions Options;
             public Measurement.Unit MeasurementUnit = Measurement.Unit.NONE;
 
-            public SubjectData(ISampleSubject subject, int interval, int sampleSize, Measurement.Unit measurementUnit)
+            public SubjectData(ISampleSubject subject, int interval, int sampleSize, SamplingOptions samplingOptions)
             {
                 Subject = subject;
                 Interval = interval;
                 SampleSize = sampleSize;
-                MeasurementUnit = measurementUnit;
+                Options = samplingOptions;
             }
 
             public void AddSample(double sample)
@@ -40,12 +46,47 @@ namespace Chetch.Utilities
 
                 if (Samples.Count > SampleSize)
                 {
-                    Average = Average + (sample - Samples[0]) / (double)SampleSize;
+                    //Average = Average + (sample - Samples[0]) / (double)SampleSize;
                     Samples.RemoveAt(0);
                 }
                 else
                 {
-                    Average = ((Average * (double)(Samples.Count - 1)) + sample) / (double)Samples.Count;
+                    //Average = ((Average * (double)(Samples.Count - 1)) + sample) / (double)Samples.Count;
+                }
+
+                double min = 0;
+                double max = 0;
+                double total = 0;
+                for(int i = 0; i < Samples.Count; i++)
+                {
+                    double val = Samples[i];
+                    if(i == 0)
+                    {
+                        min = val;
+                        max = min;
+                    } else
+                    {
+                        if (val < min) min = val;
+                        if (val > max) max = val;
+                    }
+                    total += val;
+                }
+
+                double mean = total / (double)Samples.Count;
+                switch (Options)
+                {
+                    case SamplingOptions.MEAN:
+                        Average = mean;
+                        break;
+                    case SamplingOptions.MEAN_PRUNE_MIN_MAX:
+                        if(Samples.Count > 2)
+                        {
+                            Average = (total - min - max) / (double)(Samples.Count - 2);
+                        } else
+                        {
+                            Average = mean;
+                        }
+                        break;
                 }
             }
         } //end SubjectData class
@@ -55,7 +96,7 @@ namespace Chetch.Utilities
         private List<System.Timers.Timer> _timers = new List<System.Timers.Timer>();
         private Dictionary<ISampleSubject, SubjectData> _subjects2data = new Dictionary<ISampleSubject, SubjectData>();
 
-        public void Add(ISampleSubject subject, int interval, int sampleSize, Measurement.Unit measurementUnit = Measurement.Unit.NONE)
+        public void Add(ISampleSubject subject, int interval, int sampleSize, SamplingOptions samplingOptions = SamplingOptions.MEAN)
         {
             if (!_subjects.ContainsKey(interval))
             {
@@ -64,7 +105,7 @@ namespace Chetch.Utilities
 
             if (!_subjects2data.ContainsKey(subject))
             {
-                SubjectData sd = new SubjectData(subject, interval, sampleSize, measurementUnit);
+                SubjectData sd = new SubjectData(subject, interval, sampleSize, samplingOptions);
                 _subjects[interval].Add(sd);
                 _subjects2data[subject] = sd;
             }
@@ -92,6 +133,14 @@ namespace Chetch.Utilities
             SubjectData sd = _subjects2data[subject];
             sd.AddSample(sample);
             return sd.Average;
+        }
+
+        public List<double> GetSubjectSamples(ISampleSubject subject)
+        {
+            if (!_subjects2data.ContainsKey(subject)) return null;
+
+            SubjectData sd = _subjects2data[subject];
+            return sd.Samples;
         }
 
         public double GetAverage(ISampleSubject subject)
