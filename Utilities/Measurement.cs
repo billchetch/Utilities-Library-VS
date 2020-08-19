@@ -12,8 +12,8 @@ namespace Chetch.Utilities
         public const double METER_2_CM = 100;
         public const double MM_2_M = 1000;
 
-        public const double SPEED_OF_SOUND_MPS = 343.0;
-
+        public const double SPEED_OF_SOUND_20C = 343.0;
+        
         public enum Unit
         {
             NONE,
@@ -56,14 +56,19 @@ namespace Chetch.Utilities
             return 1;
         }
 
-        static public double ConvertUnit(double value, Unit from, Unit to = Unit.NONE)
+        static public double ConvertUnit(double value, Unit from, Unit to)
         {
-            return value * _asStandardUnit(from) / _asStandardUnit(to);
+            return value * ConvertUnit(from, to);
         }
 
-        static public double ConvertUnit(Unit from, Unit to = Unit.NONE)
+        static public double ConvertUnit(Unit from, Unit to)
         {
-            return ConvertUnit(1, from, to);
+            return _asStandardUnit(from) / _asStandardUnit(to);
+        }
+
+        static public double GetSpeedOfSound(double temp)
+        {
+            return SPEED_OF_SOUND_20C + ((temp - 20) / 2);
         }
 
         static public double GetDistance(double lat1, double lng1, double lat2, double lng2, bool coordsInDegrees = true)

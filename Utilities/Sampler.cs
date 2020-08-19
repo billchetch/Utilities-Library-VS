@@ -24,12 +24,14 @@ namespace Chetch.Utilities
             public int SampleSize = 0;
             List<double> Samples = new List<double>();
             public double Average { get; internal set; }
+            public Measurement.Unit MeasurementUnit = Measurement.Unit.NONE;
 
-            public SubjectData(ISampleSubject subject, int interval, int sampleSize)
+            public SubjectData(ISampleSubject subject, int interval, int sampleSize, Measurement.Unit measurementUnit)
             {
                 Subject = subject;
                 Interval = interval;
                 SampleSize = sampleSize;
+                MeasurementUnit = measurementUnit;
             }
 
             public void AddSample(double sample)
@@ -53,7 +55,7 @@ namespace Chetch.Utilities
         private List<System.Timers.Timer> _timers = new List<System.Timers.Timer>();
         private Dictionary<ISampleSubject, SubjectData> _subjects2data = new Dictionary<ISampleSubject, SubjectData>();
 
-        public void Add(ISampleSubject subject, int interval, int sampleSize)
+        public void Add(ISampleSubject subject, int interval, int sampleSize, Measurement.Unit measurementUnit = Measurement.Unit.NONE)
         {
             if (!_subjects.ContainsKey(interval))
             {
@@ -62,7 +64,7 @@ namespace Chetch.Utilities
 
             if (!_subjects2data.ContainsKey(subject))
             {
-                SubjectData sd = new SubjectData(subject, interval, sampleSize);
+                SubjectData sd = new SubjectData(subject, interval, sampleSize, measurementUnit);
                 _subjects[interval].Add(sd);
                 _subjects2data[subject] = sd;
             }
