@@ -22,10 +22,17 @@ namespace Chetch.Utilities
                 var portnames = SerialPort.GetPortNames();
                 var ports = searcher.Get().Cast<ManagementBaseObject>().ToList().Select(p => p["Caption"].ToString());
                 var portList = portnames.Select(n => n + ": " + ports.FirstOrDefault(s => s.Contains(n))).ToList();
+                String[] searchOns = searchOn.Split(',');
                 foreach (String p in portList)
                 {
                     String[] parts = p.Split(':');
-                    if (parts.Length > 1 && parts[1].Contains(searchOn) && !foundPorts.Contains(parts[0])) foundPorts.Add(parts[0]);
+                    if (parts.Length > 1)
+                    {
+                        foreach (String toFind in searchOns)
+                        {
+                            if(parts[1].Contains(toFind.Trim()) && !foundPorts.Contains(parts[0])) foundPorts.Add(parts[0]);
+                        }
+                    }
                 }
             }
 
