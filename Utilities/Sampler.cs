@@ -34,6 +34,7 @@ namespace Chetch.Utilities
             public List<int> SampleIntervals { get; } = new List<int>();
 
             public double SampleTotal { get; internal set; } = 0; //sum of sample values
+            public int SampleCount { get; internal set; } = 0;
             public long DurationTotal { get; internal set; } = 0; //in millis
             public double Average { get; internal set; }
             public SamplingOptions Options;
@@ -78,41 +79,51 @@ namespace Chetch.Utilities
                 }
 
                 double average = 0;
+                int sampleCount = 0;
                 switch (Options)
                 {
                     case SamplingOptions.MEAN_COUNT:
-                        average = sampleTotal / (double)Samples.Count;
+                        sampleCount = Samples.Count;
+                        average = sampleTotal / (double)sampleCount;
                         break;
 
                     case SamplingOptions.MEAN_COUNT_PRUNE_MIN_MAX:
                         if(Samples.Count > 2)
                         {
-                            average = (sampleTotal - Samples[minIdx] - Samples[maxIdx]) / (double)(Samples.Count - 2);
+                            sampleTotal = (sampleTotal - Samples[minIdx] - Samples[maxIdx]);
+                            sampleCount = Samples.Count - 2;
+                            average = sampleTotal / (double)(sampleCount);
                         } else
                         {
-                            average = sampleTotal / (double)Samples.Count;
+                            sampleCount = Samples.Count;
+                            average = sampleTotal / (double)sampleCount;
                         }
                         break;
 
                     case SamplingOptions.MEAN_INTERVAL:
+                        sampleCount = Samples.Count;
                         average = sampleTotal * (double)Interval / (double)durationTotal;
                         break;
 
                     case SamplingOptions.MEAN_INTERVAL_PRUNE_MIN_MAX:
                         if (Samples.Count > 2)
                         {
+                            sampleTotal = (sampleTotal - Samples[minIdx] - Samples[maxIdx]);
+                            sampleCount = Samples.Count - 2;
                             durationTotal = durationTotal - SampleIntervals[minIdx] - SampleIntervals[maxIdx];
-                            average = (sampleTotal - Samples[minIdx] - Samples[maxIdx]) / (double)durationTotal;
+                            average = sampleTotal / (double)durationTotal;
                         }
                         else
                         {
+                            sampleCount = Samples.Count;
                             average = sampleTotal / (double)durationTotal;
                         }
                         break;
                 }
 
                 Average = average;
-                SampleTotal = sampleTotal;
+                SampleTotal = sampleTotal; 
+                SampleCount = sampleCount;
                 DurationTotal = durationTotal;
 
             }
@@ -191,6 +202,11 @@ namespace Chetch.Utilities
         public double GetSampleTotal(ISampleSubject subject)
         {
             return _subjects2data.ContainsKey(subject) ? _subjects2data[subject].SampleTotal : 0;
+        }
+
+        public double GetSampleCount(ISampleSubject subject)
+        {
+            return _subjects2data.ContainsKey(subject) ? _subjects2data[subject].SampleCount : 0;
         }
 
         public long GetDurationTotal(ISampleSubject subject)
