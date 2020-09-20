@@ -18,8 +18,10 @@ namespace Chetch.Utilities
     {
         public enum SamplingOptions
         {
-            MEAN,
-            MEAN_PRUNE_MIN_MAX
+            MEAN_COUNT,
+            MEAN_COUNT_PRUNE_MIN_MAX,
+            MEAN_INTERVAL,
+            MEAN_INTERVAL_PRUNE_MIN_MAX
         }
 
         public class SubjectData
@@ -57,39 +59,51 @@ namespace Chetch.Utilities
                     SampleIntervals.RemoveAt(0);
                 }
 
-                double min = 0;
-                double max = 0;
+                int minIdx = 0;
+                int maxIdx = 0;
                 double total = 0;
+                long duration = 0;
                 for(int i = 0; i < Samples.Count; i++)
                 {
                     double val = Samples[i];
-                    double timeCorrection = (double)Interval / (double)SampleIntervals[i];
-                    val = val * timeCorrection;
-                    if (i == 0)
+                    if (i > 0)
                     {
-                        min = val;
-                        max = min;
-                    } else
-                    {
-                        if (val < min) min = val;
-                        if (val > max) max = val;
+                        if (val < Samples[minIdx]) minIdx = i;
+                        if (val > Samples[maxIdx]) maxIdx = i;
                     }
                     total += val;
+                    duration += SampleIntervals[i];
                 }
 
-                double mean = total / (double)Samples.Count;
                 switch (Options)
                 {
-                    case SamplingOptions.MEAN:
-                        Average = mean;
+                    case SamplingOptions.MEAN_COUNT:
+                        Average = total / (double)Samples.Count;
                         break;
-                    case SamplingOptions.MEAN_PRUNE_MIN_MAX:
+
+                    case SamplingOptions.MEAN_COUNT_PRUNE_MIN_MAX:
                         if(Samples.Count > 2)
                         {
-                            Average = (total - min - max) / (double)(Samples.Count - 2);
+                            Average = (total - Samples[minIdx] - Samples[maxIdx]) / (double)(Samples.Count - 2);
                         } else
                         {
-                            Average = mean;
+                            Average = total / (double)Samples.Count;
+                        }
+                        break;
+
+                    case SamplingOptions.MEAN_INTERVAL:
+                        Average = total * Interval / duration;
+                        break;
+
+                    case SamplingOptions.MEAN_INTERVAL_PRUNE_MIN_MAX:
+                        if (Samples.Count > 2)
+                        {
+                            long prunedDuration = duration - SampleIntervals[minIdx] - SampleIntervals[maxIdx];
+                            Average = (total - Samples[minIdx] - Samples[maxIdx]) / (double)(prunedDuration);
+                        }
+                        else
+                        {
+                            Average = total / (double)duration;
                         }
                         break;
                 }
@@ -103,7 +117,7 @@ namespace Chetch.Utilities
         private Dictionary<ISampleSubject, SubjectData> _subjects2data = new Dictionary<ISampleSubject, SubjectData>();
         public event SampleProvidedHandler SampleProvided;
 
-        public void Add(ISampleSubject subject, int interval, int sampleSize, SamplingOptions samplingOptions = SamplingOptions.MEAN)
+        public void Add(ISampleSubject subject, int interval, int sampleSize, SamplingOptions samplingOptions = SamplingOptions.MEAN_COUNT)
         {
             if (!_subjects.ContainsKey(interval))
             {
