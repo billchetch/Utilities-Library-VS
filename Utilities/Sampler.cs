@@ -31,7 +31,7 @@ namespace Chetch.Utilities
             public int SampleSize = 0;
             public List<double> Samples { get; } = new List<double>();
             public List<long> SampleTimes { get; } = new List<long>();
-            public List<int> SampleIntervals { get; } = new List<int>();
+            public List<long> SampleIntervals { get; } = new List<long>();
 
             public double SampleTotal { get; internal set; } = 0; //sum of sample values
             public int SampleCount { get; internal set; } = 0;
@@ -48,12 +48,19 @@ namespace Chetch.Utilities
                 Options = samplingOptions;
             }
 
-            public void AddSample(double sample)
+            public void AddSample(double sample, long interval = -1)
             {
                 Samples.Add(sample);
                 long timeInMillis = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
                 SampleTimes.Add(timeInMillis);
-                SampleIntervals.Add(Samples.Count == 1 ? Interval : (int)(timeInMillis - SampleTimes[SampleTimes.Count - 2]));
+                if (interval > 0)
+                {
+                    SampleIntervals.Add(interval);
+                }
+                else
+                {
+                    SampleIntervals.Add(Samples.Count == 1 ? Interval : (int)(timeInMillis - SampleTimes[SampleTimes.Count - 2]));
+                }
                 
                 if (Samples.Count > SampleSize)
                 {
@@ -166,12 +173,12 @@ namespace Chetch.Utilities
             }
         }
 
-        public double ProvideSample(ISampleSubject subject, double sample)
+        public double ProvideSample(ISampleSubject subject, double sample, long interval = -1)
         {
             if (!_subjects2data.ContainsKey(subject)) return 0;
 
             SubjectData sd = _subjects2data[subject];
-            sd.AddSample(sample);
+            sd.AddSample(sample, interval);
 
             SampleProvided?.Invoke(subject);
 
