@@ -91,7 +91,7 @@ namespace Chetch.Utilities
             }
         } //end SubjectData class
 
-        public delegate void SampleProvidedHandler(ISampleSubject);
+        public delegate void SampleProvidedHandler(ISampleSubject sampleSubject);
 
         private Dictionary<int, List<SubjectData>> _subjects = new Dictionary<int, List<SubjectData>>();
         private List<System.Timers.Timer> _timers = new List<System.Timers.Timer>();
