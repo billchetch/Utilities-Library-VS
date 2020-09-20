@@ -33,6 +33,8 @@ namespace Chetch.Utilities
             public List<long> SampleTimes { get; } = new List<long>();
             public List<int> SampleIntervals { get; } = new List<int>();
 
+            public double SampleTotal { get; internal set; } = 0; //sum of sample values
+            public long DurationTotal { get; internal set; } = 0; //in millis
             public double Average { get; internal set; }
             public SamplingOptions Options;
             public Measurement.Unit MeasurementUnit = Measurement.Unit.NONE;
@@ -61,8 +63,8 @@ namespace Chetch.Utilities
 
                 int minIdx = 0;
                 int maxIdx = 0;
-                double total = 0;
-                long duration = 0;
+                double sampleTotal = 0;
+                long durationTotal = 0;
                 for(int i = 0; i < Samples.Count; i++)
                 {
                     double val = Samples[i];
@@ -71,42 +73,48 @@ namespace Chetch.Utilities
                         if (val < Samples[minIdx]) minIdx = i;
                         if (val > Samples[maxIdx]) maxIdx = i;
                     }
-                    total += val;
-                    duration += SampleIntervals[i];
+                    sampleTotal += val;
+                    durationTotal += SampleIntervals[i];
                 }
 
+                double average = 0;
                 switch (Options)
                 {
                     case SamplingOptions.MEAN_COUNT:
-                        Average = total / (double)Samples.Count;
+                        average = sampleTotal / (double)Samples.Count;
                         break;
 
                     case SamplingOptions.MEAN_COUNT_PRUNE_MIN_MAX:
                         if(Samples.Count > 2)
                         {
-                            Average = (total - Samples[minIdx] - Samples[maxIdx]) / (double)(Samples.Count - 2);
+                            average = (sampleTotal - Samples[minIdx] - Samples[maxIdx]) / (double)(Samples.Count - 2);
                         } else
                         {
-                            Average = total / (double)Samples.Count;
+                            average = sampleTotal / (double)Samples.Count;
                         }
                         break;
 
                     case SamplingOptions.MEAN_INTERVAL:
-                        Average = total * Interval / duration;
+                        average = sampleTotal * (double)Interval / (double)durationTotal;
                         break;
 
                     case SamplingOptions.MEAN_INTERVAL_PRUNE_MIN_MAX:
                         if (Samples.Count > 2)
                         {
-                            long prunedDuration = duration - SampleIntervals[minIdx] - SampleIntervals[maxIdx];
-                            Average = (total - Samples[minIdx] - Samples[maxIdx]) / (double)(prunedDuration);
+                            durationTotal = durationTotal - SampleIntervals[minIdx] - SampleIntervals[maxIdx];
+                            average = (sampleTotal - Samples[minIdx] - Samples[maxIdx]) / (double)durationTotal;
                         }
                         else
                         {
-                            Average = total / (double)duration;
+                            average = sampleTotal / (double)durationTotal;
                         }
                         break;
                 }
+
+                Average = average;
+                SampleTotal = sampleTotal;
+                DurationTotal = durationTotal;
+
             }
         } //end SubjectData class
 
@@ -180,6 +188,15 @@ namespace Chetch.Utilities
             return _subjects2data.ContainsKey(subject) ? _subjects2data[subject].Average : 0;
         }
 
+        public double GetSampleTotal(ISampleSubject subject)
+        {
+            return _subjects2data.ContainsKey(subject) ? _subjects2data[subject].SampleTotal : 0;
+        }
+
+        public long GetDurationTotal(ISampleSubject subject)
+        {
+            return _subjects2data.ContainsKey(subject) ? _subjects2data[subject].DurationTotal : 0;
+        }
         public void Start()
         {
             foreach (int interval in _subjects.Keys)
