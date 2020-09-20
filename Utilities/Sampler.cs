@@ -22,7 +22,7 @@ namespace Chetch.Utilities
             MEAN_PRUNE_MIN_MAX
         }
 
-        class SubjectData
+        public class SubjectData
         {
             public ISampleSubject Subject;
             public int Interval = 0;
@@ -151,6 +151,14 @@ namespace Chetch.Utilities
 
             SubjectData sd = _subjects2data[subject];
             return sd.Samples;
+        }
+
+        public SubjectData GetSubjectData(ISampleSubject subject)
+        {
+            if (!_subjects2data.ContainsKey(subject)) return null;
+
+            SubjectData sd = _subjects2data[subject];
+            return sd;
         }
 
         public double GetAverage(ISampleSubject subject)
