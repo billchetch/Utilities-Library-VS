@@ -31,7 +31,7 @@ namespace Chetch.Utilities
             public double Average { get; internal set; }
             public SamplingOptions Options;
             public Measurement.Unit MeasurementUnit = Measurement.Unit.NONE;
-
+            
             public SubjectData(ISampleSubject subject, int interval, int sampleSize, SamplingOptions samplingOptions)
             {
                 Subject = subject;
@@ -91,10 +91,12 @@ namespace Chetch.Utilities
             }
         } //end SubjectData class
 
+        public delegate void SampleProvidedHandler(ISampleSubject);
 
         private Dictionary<int, List<SubjectData>> _subjects = new Dictionary<int, List<SubjectData>>();
         private List<System.Timers.Timer> _timers = new List<System.Timers.Timer>();
         private Dictionary<ISampleSubject, SubjectData> _subjects2data = new Dictionary<ISampleSubject, SubjectData>();
+        public event SampleProvidedHandler SampleProvided;
 
         public void Add(ISampleSubject subject, int interval, int sampleSize, SamplingOptions samplingOptions = SamplingOptions.MEAN)
         {
@@ -132,6 +134,9 @@ namespace Chetch.Utilities
 
             SubjectData sd = _subjects2data[subject];
             sd.AddSample(sample);
+
+            SampleProvided?.Invoke(subject);
+
             return sd.Average;
         }
 
