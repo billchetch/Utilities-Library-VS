@@ -27,9 +27,9 @@ namespace Chetch.Utilities
             public ISampleSubject Subject;
             public int Interval = 0;
             public int SampleSize = 0;
-            public List<double> Samples = new List<double>();
-            private List<long> SampleTimes = new List<long>();
-            private List<int> SampleIntervals = new List<int>();
+            public List<double> Samples { get; } = new List<double>();
+            public List<long> SampleTimes { get; } = new List<long>();
+            public List<int> SampleIntervals { get; } = new List<int>();
 
             public double Average { get; internal set; }
             public SamplingOptions Options;
