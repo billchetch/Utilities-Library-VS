@@ -28,6 +28,9 @@ namespace Chetch.Utilities
             public int Interval = 0;
             public int SampleSize = 0;
             public List<double> Samples = new List<double>();
+            private List<long> SampleTimes = new List<long>();
+            private List<int> SampleIntervals = new List<int>();
+
             public double Average { get; internal set; }
             public SamplingOptions Options;
             public Measurement.Unit MeasurementUnit = Measurement.Unit.NONE;
@@ -43,15 +46,15 @@ namespace Chetch.Utilities
             public void AddSample(double sample)
             {
                 Samples.Add(sample);
-
+                long timeInMillis = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+                SampleTimes.Add(timeInMillis);
+                SampleIntervals.Add(Samples.Count == 1 ? Interval : (int)(timeInMillis - SampleTimes[SampleTimes.Count - 2]));
+                
                 if (Samples.Count > SampleSize)
                 {
-                    //Average = Average + (sample - Samples[0]) / (double)SampleSize;
                     Samples.RemoveAt(0);
-                }
-                else
-                {
-                    //Average = ((Average * (double)(Samples.Count - 1)) + sample) / (double)Samples.Count;
+                    SampleTimes.RemoveAt(0);
+                    SampleIntervals.RemoveAt(0);
                 }
 
                 double min = 0;
@@ -60,7 +63,9 @@ namespace Chetch.Utilities
                 for(int i = 0; i < Samples.Count; i++)
                 {
                     double val = Samples[i];
-                    if(i == 0)
+                    double timeCorrection = (double)Interval / (double)SampleIntervals[i];
+                    val = val * timeCorrection;
+                    if (i == 0)
                     {
                         min = val;
                         max = min;
