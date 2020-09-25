@@ -38,5 +38,29 @@ namespace Chetch.Utilities
 
             return foundPorts;
         }
+
+        static public List<String> ExpandComPortRanges(String portRanges)
+        {
+            String[] parts = portRanges.Split(',');
+            List<String> expandedPorts = new List<String>();
+            foreach (String portRange in parts)
+            {
+                String[] rangeParts = portRange.Split('-');
+                if (rangeParts.Length == 2)
+                {
+                    int start = System.Convert.ToInt16(rangeParts[0].Replace("COM", ""));
+                    int end = System.Convert.ToInt16(rangeParts[1].Replace("COM", ""));
+                    for (int i = start; i <= end; i++)
+                    {
+                        expandedPorts.Add("COM" + i);
+                    }
+                }
+                else
+                {
+                    expandedPorts.Add("COM" + rangeParts[0].Replace("COM", ""));
+                }
+            }
+            return expandedPorts;
+        }
     }
 }
