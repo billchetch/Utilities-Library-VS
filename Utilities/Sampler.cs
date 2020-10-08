@@ -138,38 +138,27 @@ namespace Chetch.Utilities
 
         public delegate void SampleProvidedHandler(ISampleSubject sampleSubject);
 
-        private Dictionary<int, List<SubjectData>> _subjects = new Dictionary<int, List<SubjectData>>();
-        private List<System.Timers.Timer> _timers = new List<System.Timers.Timer>();
         private Dictionary<ISampleSubject, SubjectData> _subjects2data = new Dictionary<ISampleSubject, SubjectData>();
         public event SampleProvidedHandler SampleProvided;
 
+        private System.Timers.Timer _timer;
+        private int _timerCount = 0;
+        private int _maxTimerInterval = 0;
+
         public void Add(ISampleSubject subject, int interval, int sampleSize, SamplingOptions samplingOptions = SamplingOptions.MEAN_COUNT)
         {
-            if (!_subjects.ContainsKey(interval))
-            {
-                _subjects[interval] = new List<SubjectData>();
-            }
-
-            if (!_subjects2data.ContainsKey(subject))
+           if (!_subjects2data.ContainsKey(subject))
             {
                 SubjectData sd = new SubjectData(subject, interval, sampleSize, samplingOptions);
-                _subjects[interval].Add(sd);
                 _subjects2data[subject] = sd;
             }
         }
 
         public void Remove(ISampleSubject subject)
         {
-            foreach (List<SubjectData> subjects in _subjects.Values)
+            if(_subjects2data.ContainsKey(subject))
             {
-                foreach (SubjectData sd in subjects)
-                {
-                    if (sd.Subject == subject)
-                    {
-                        subjects.Remove(sd);
-                        _subjects2data.Remove(subject);
-                    }
-                }
+                _subjects2data.Remove(subject);
             }
         }
 
@@ -222,35 +211,44 @@ namespace Chetch.Utilities
         }
         public void Start()
         {
-            foreach (int interval in _subjects.Keys)
+            _timer = new System.Timers.Timer();
+            List<int> intervals = new List<int>();
+            foreach(var sd in _subjects2data.Values)
             {
-                var timer = new System.Timers.Timer();
-                timer.Interval = interval;
-                timer.Elapsed += OnTimer;
-                _timers.Add(timer);
-                timer.Start();
+                intervals.Add(sd.Interval);
             }
+            _timer.Interval = Math.GCD(intervals.ToArray());
+            _timer.Elapsed += OnTimer;
+            _timer.Start();
+            _maxTimerInterval = Math.LCM(intervals.ToArray());
         }
 
         public void Stop()
         {
-            foreach (var timer in _timers)
-            {
-                timer.Stop();
-            }
+            _timer.Stop();
+            
         }
 
         void OnTimer(Object sender, System.Timers.ElapsedEventArgs eventArgs)
         {
             if (sender is System.Timers.Timer)
             {
+                _timerCount++;
                 int interval = (int)((System.Timers.Timer)sender).Interval;
-                var subjects = _subjects[interval];
-                foreach (SubjectData sd in subjects)
+                int timerInterval = _timerCount * interval;
+                foreach(var sd in _subjects2data.Values)
                 {
-                    sd.Subject.RequestSample(this);
+                    if (timerInterval % sd.Interval == 0)
+                    {
+                        sd.Subject.RequestSample(this);
+                    }
+                }
+
+                if (timerInterval % _maxTimerInterval == 0)
+                {
+                    _timerCount = 0;
                 }
             }
         }
-    }
+    } //end class
 }

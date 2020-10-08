@@ -75,10 +75,10 @@ namespace Chetch.Utilities
         {
             if (!coordsInDegrees) // conver to degrees first
             {
-                lat1 *=  180.0 / Math.PI;
-                lng1 *= 180.0 / Math.PI;
-                lat2 *= 180.0 / Math.PI;
-                lng2 *= 180.0 / Math.PI;
+                lat1 *=  180.0 / System.Math.PI;
+                lng1 *= 180.0 / System.Math.PI;
+                lat2 *= 180.0 / System.Math.PI;
+                lng2 *= 180.0 / System.Math.PI;
             }
 
             GeoCoordinate p1 = new GeoCoordinate(lat1, lng1);
@@ -91,25 +91,25 @@ namespace Chetch.Utilities
         {
             if (coordsInDegrees) // conver to radians first
             {
-                lat1 /= Math.PI * 180.0;
-                lng1 /= Math.PI * 180.0;
-                lat2 /= Math.PI * 180.0;
-                lng2 /= Math.PI * 180.0;
+                lat1 /= System.Math.PI * 180.0;
+                lng1 /= System.Math.PI * 180.0;
+                lat2 /= System.Math.PI * 180.0;
+                lng2 /= System.Math.PI * 180.0;
             }
-
+            
             //calculate bearing (lat/lon assumed in radians)
             double dLon = (lng2 - lng1);
-            double y = Math.Sin(dLon) * Math.Cos(lat2);
-            double x = Math.Cos(lat1) * Math.Sin(lat2) - Math.Sin(lat1) * Math.Cos(lat2) * Math.Cos(dLon);
+            double y = System.Math.Sin(dLon) * System.Math.Cos(lat2);
+            double x = System.Math.Cos(lat1) * System.Math.Sin(lat2) - System.Math.Sin(lat1) * System.Math.Cos(lat2) * System.Math.Cos(dLon);
 
-            double brng = Math.Atan2(y, x);
+            double brng = System.Math.Atan2(y, x);
             if (coordsInDegrees)
             {
-                return ((brng * 180.0 / Math.PI) + 360) % 360;
+                return ((brng * 180.0 / System.Math.PI) + 360) % 360;
             }
             else
             {
-                return (brng + 2.0 * Math.PI) % 2.0 * Math.PI;
+                return (brng + 2.0 * System.Math.PI) % 2.0 * System.Math.PI;
             }
         }
 
@@ -122,7 +122,7 @@ namespace Chetch.Utilities
             }
             else
             {
-                return (bearing + Math.PI) % 2.0 * Math.PI;
+                return (bearing + System.Math.PI) % 2.0 * System.Math.PI;
             }
 
         }
