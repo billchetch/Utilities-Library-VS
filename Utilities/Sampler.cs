@@ -258,8 +258,7 @@ namespace Chetch.Utilities
 
         public void Stop()
         {
-            _timer.Stop();
-            
+            if(_timer != null)_timer.Stop();
         }
 
         void OnTimer(Object sender, System.Timers.ElapsedEventArgs eventArgs)
