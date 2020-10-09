@@ -27,10 +27,13 @@ namespace Chetch.Utilities
         public class SubjectData
         {
             public ISampleSubject Subject;
-            public int Interval = 0;
-            public int SampleSize = 0;
+            public int Interval { get; set; } = 0;
+            public int IntervalDeviation { get; set; } = -1;
+            public int SampleSize { get; set; } = 0;
+            
             public List<double> Samples { get; } = new List<double>();
             public List<long> SampleTimes { get; } = new List<long>();
+            private DateTime _lastAddSampleAttempt;
             public List<long> SampleIntervals { get; } = new List<long>();
 
             public double SampleTotal { get; internal set; } = 0; //sum of sample values
@@ -40,28 +43,57 @@ namespace Chetch.Utilities
             public SamplingOptions Options;
             public Measurement.Unit MeasurementUnit = Measurement.Unit.NONE;
             
-            public SubjectData(ISampleSubject subject, int interval, int sampleSize, SamplingOptions samplingOptions)
+            public SubjectData(ISampleSubject subject, int interval, int sampleSize, SamplingOptions samplingOptions, int intervalDeviation)
             {
                 Subject = subject;
                 Interval = interval;
                 SampleSize = sampleSize;
                 Options = samplingOptions;
+                IntervalDeviation = intervalDeviation;
             }
 
             public void AddSample(double sample, long interval = -1)
             {
-                Samples.Add(sample);
-                long timeInMillis = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
-                SampleTimes.Add(timeInMillis);
+                long nowInMillis = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+
+                //What interval of time is this sample over?  Provided in the function call or to be calculated from previous function calls...
+                long interval2add;
                 if (interval > 0)
                 {
-                    SampleIntervals.Add(interval);
+                    interval2add = interval;
                 }
                 else
                 {
-                    SampleIntervals.Add(Samples.Count == 1 ? Interval : (int)(timeInMillis - SampleTimes[SampleTimes.Count - 2]));
+                    if(Samples.Count == 0)
+                    {
+                        interval2add = Interval;
+                    } else { 
+                        long prevSampleTimeInMillis = _lastAddSampleAttempt.Ticks / TimeSpan.TicksPerMillisecond;
+                        interval2add = nowInMillis - prevSampleTimeInMillis;
+                    }
                 }
-                
+
+                //do soe quality control checks
+                bool rejectSample = false;
+
+                //First one is if we care about how much the interval deviates from the expected Interval
+                if (IntervalDeviation >= 0 && System.Math.Abs(interval2add - Interval) > IntervalDeviation)
+                {
+                    rejectSample = true;
+                }
+
+                //Now record the latest sample attempt and if rejecting exit function
+                _lastAddSampleAttempt = DateTime.Now;
+                if (rejectSample)
+                {
+                    return;
+                }
+
+                //by here the sample is good
+                Samples.Add(sample);
+                SampleTimes.Add(nowInMillis);
+                SampleIntervals.Add(interval2add);
+
                 if (Samples.Count > SampleSize)
                 {
                     Samples.RemoveAt(0);
@@ -84,7 +116,7 @@ namespace Chetch.Utilities
                     sampleTotal += val;
                     durationTotal += SampleIntervals[i];
                 }
-
+                
                 double average = 0;
                 int sampleCount = 0;
                 switch (Options)
@@ -128,6 +160,7 @@ namespace Chetch.Utilities
                         break;
                 }
 
+                //now assign values
                 Average = average;
                 SampleTotal = sampleTotal; 
                 SampleCount = sampleCount;
@@ -145,11 +178,11 @@ namespace Chetch.Utilities
         private int _timerCount = 0;
         private int _maxTimerInterval = 0;
 
-        public void Add(ISampleSubject subject, int interval, int sampleSize, SamplingOptions samplingOptions = SamplingOptions.MEAN_COUNT)
+        public void Add(ISampleSubject subject, int interval, int sampleSize, SamplingOptions samplingOptions = SamplingOptions.MEAN_COUNT, int intervalDeviation = -1)
         {
            if (!_subjects2data.ContainsKey(subject))
             {
-                SubjectData sd = new SubjectData(subject, interval, sampleSize, samplingOptions);
+                SubjectData sd = new SubjectData(subject, interval, sampleSize, samplingOptions, intervalDeviation);
                 _subjects2data[subject] = sd;
             }
         }
