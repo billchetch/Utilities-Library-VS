@@ -27,6 +27,7 @@ namespace Chetch.Utilities
         public class SubjectData
         {
             public ISampleSubject Subject;
+            public bool CanRequest { get; set; } = true;
             public int Interval { get; set; } = 0;
             public int IntervalDeviation { get; set; } = -1; //quality control... can reject samples that deviate too far from the ideal 'Interval'
             public int SampleSize { get; set; } = 0;
@@ -169,10 +170,14 @@ namespace Chetch.Utilities
             }
         } //end SubjectData class
 
+        private static object LockRequestSample = new Object();
+
         public delegate void SampleProvidedHandler(ISampleSubject sampleSubject);
+        public delegate void SampleErrorHandler(ISampleSubject sampleSubject, Exception e);
 
         private Dictionary<ISampleSubject, SubjectData> _subjects2data = new Dictionary<ISampleSubject, SubjectData>();
         public event SampleProvidedHandler SampleProvided;
+        public event SampleErrorHandler SampleError;
 
         private System.Timers.Timer _timer;
         private int _timerCount = 0;
@@ -270,9 +275,19 @@ namespace Chetch.Utilities
                 int timerInterval = _timerCount * interval;
                 foreach(var sd in _subjects2data.Values)
                 {
-                    if (timerInterval % sd.Interval == 0)
+                    if (timerInterval % sd.Interval == 0 && sd.CanRequest)
                     {
-                        sd.Subject.RequestSample(this);
+                        try
+                        {
+                            lock (LockRequestSample)
+                            {
+                                sd.Subject.RequestSample(this);
+                            }
+                        } catch (Exception e)
+                        {
+                            sd.CanRequest = false;
+                            SampleError?.Invoke(sd.Subject, e);
+                        }
                     }
                 }
 
