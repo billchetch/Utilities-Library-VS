@@ -28,7 +28,7 @@ namespace Chetch.Utilities
         {
             public ISampleSubject Subject;
             public int Interval { get; set; } = 0;
-            public int IntervalDeviation { get; set; } = -1;
+            public int IntervalDeviation { get; set; } = -1; //quality control... can reject samples that deviate too far from the ideal 'Interval'
             public int SampleSize { get; set; } = 0;
             
             public List<double> Samples { get; } = new List<double>();
