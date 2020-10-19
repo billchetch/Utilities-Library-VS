@@ -187,6 +187,13 @@ namespace Chetch.Utilities
             return pnputil(PNPUTIL_COMMAND_DISABLE_DEVICE, instanceID);
         }
 
+        public Process ResetDevice(String instanceID, int sleepFor = 500)
+        {
+            DisableDevice(instanceID);
+            System.Threading.Thread.Sleep(500);
+            return EnableDevice(instanceID);
+        }
+
         public Process RestartDevice(String instanceID)
         {
             return pnputil(PNPUTIL_COMMAND_RESTART_DEVICE, instanceID);
