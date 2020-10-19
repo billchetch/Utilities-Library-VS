@@ -46,19 +46,28 @@ namespace Chetch.Utilities
                 }
             }
 
-            public String GetDescription()
+            public String Description
             {
-                return GetInfo("Device Description");
+                get
+                {
+                    return GetInfo("Device Description");
+                }
             }
 
-            public String GetInstanceID()
+            public String InstanceID
             {
-                return GetInfo("Instance ID");
+                get
+                {
+                    return GetInfo("Instance ID");
+                }
             }
 
-            public DeviceStatus GetStatus()
+            public DeviceStatus Status
             {
-                return (DeviceStatus)Enum.Parse(typeof(DeviceStatus), GetInfo("Status"), true);
+                get
+                {
+                    return (DeviceStatus)Enum.Parse(typeof(DeviceStatus), GetInfo("Status"), true);
+                }
             }
         }
 
@@ -144,19 +153,28 @@ namespace Chetch.Utilities
             {
                 if (searchOn != null)
                 {
-                    String desc = devInfo.GetDescription();
+                    String desc = devInfo.Description;
                     if (desc == null || desc.ToLower().IndexOf(searchOn) == -1) continue;
                 }
 
                 if (status != DeviceInfo.DeviceStatus.ANY)
                 {
-                    if (devInfo.GetStatus() != status) continue;
+                    if (devInfo.Status!= status) continue;
                 }
 
                 devices2return.Add(devInfo);
             }
 
             return devices2return;
+        }
+
+        public DeviceInfo GetDevices(String instanceID)
+        {
+            foreach(DeviceInfo devInfo in _devices)
+            {
+                if (devInfo.InstanceID == instanceID) return devInfo;
+            }
+            return null;
         }
 
         public Process EnableDevice(String instanceID)
