@@ -189,6 +189,7 @@ namespace Chetch.Utilities
 
         public Process ResetDevice(String instanceID, int sleepFor = 500)
         {
+            //disable and then enable
             DisableDevice(instanceID);
             System.Threading.Thread.Sleep(500);
             return EnableDevice(instanceID);
