@@ -48,6 +48,7 @@
     <Compile Include="Config.cs" />
     <Compile Include="BasicEncryption.cs" />
     <Compile Include="DataSourceObject.cs" />
+    <Compile Include="DeviceManager.cs" />
     <Compile Include="Math.cs" />
     <Compile Include="Measurement.cs" />
     <Compile Include="NamedPipeManager.cs" />
