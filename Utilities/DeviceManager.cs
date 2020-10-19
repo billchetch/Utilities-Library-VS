@@ -168,7 +168,7 @@ namespace Chetch.Utilities
             return devices2return;
         }
 
-        public DeviceInfo GetDevices(String instanceID)
+        public DeviceInfo GetDevice(String instanceID)
         {
             foreach(DeviceInfo devInfo in _devices)
             {
