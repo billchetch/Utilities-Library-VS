@@ -191,7 +191,7 @@ namespace Chetch.Utilities
         {
             //disable and then enable
             DisableDevice(instanceID);
-            System.Threading.Thread.Sleep(500);
+            System.Threading.Thread.Sleep(sleepFor);
             return EnableDevice(instanceID);
         }
 
