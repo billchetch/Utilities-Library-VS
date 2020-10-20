@@ -62,5 +62,20 @@ namespace Chetch.Utilities
             }
             return expandedPorts;
         }
+
+        static public bool IsOpen(String port)
+        {
+            SerialPort sp = new SerialPort(port);
+            try
+            {
+                sp.Open();
+                sp.Close();
+                return false;
+            }
+            catch (Exception e)
+            {
+                return true;
+            }
+        }
     }
 }
