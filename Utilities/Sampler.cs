@@ -249,6 +249,7 @@ namespace Chetch.Utilities
         }
         public void Start()
         {
+            if (_subjects2data.Count == 0) return;
             _timer = new System.Timers.Timer();
             List<int> intervals = new List<int>();
             foreach(var sd in _subjects2data.Values)
