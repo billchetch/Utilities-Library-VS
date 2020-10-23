@@ -9,6 +9,8 @@ namespace Chetch.Utilities
 {
     public static class Win32
     {
+        public const int ERROR_ATTACHED_DEVICE_NOT_FUNCTIONING = -2147024865;
+
         [DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern bool IsWow64Process(IntPtr hProcess, out bool Wow64Process);
 
