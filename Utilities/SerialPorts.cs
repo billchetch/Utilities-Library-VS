@@ -12,6 +12,43 @@ namespace Chetch.Utilities
 {
     public static class SerialPorts
     {
+        public class SerialPort : System.IO.Ports.SerialPort
+        {
+            private Object _peekBufferLock = new Object();
+            private Queue<int> _peekBuffer = new Queue<int>();
+
+            new public int BytesToRead { get => _peekBuffer.Count + base.BytesToRead; } //Question: peekbuffer stores -1 which may lead to the wrong value as base.BytesToRead may not contain that
+
+            public SerialPort(String port, int baud) : base(port, baud) { }
+
+            public SerialPort(String port) : base(port) { }
+
+            public int PeekByte()
+            {
+                lock (_peekBufferLock)
+                {
+                    int b = base.ReadByte();
+                    if (b != -1) _peekBuffer.Enqueue(b);
+                    return b;
+                }
+            }
+
+            new public int ReadByte()
+            {
+                lock (_peekBufferLock)
+                {
+                    if (_peekBuffer.Count > 0)
+                    {
+                        return _peekBuffer.Dequeue();
+                    }
+                    else
+                    {
+                        return base.ReadByte();
+                    }
+                }
+            }
+        } //end class
+
         public static List<String> Find(String searchOn)
         {
             List<String> foundPorts = new List<String>();
