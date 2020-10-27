@@ -60,21 +60,30 @@ namespace Chetch.Utilities
             using (var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_PnPEntity WHERE Caption like '%(COM%'"))
             {
                 var portnames = SerialPort.GetPortNames();
-                var ports = searcher.Get().Cast<ManagementBaseObject>().ToList().Select(p => p["Caption"].ToString());
-                var portList = portnames.Select(n => n + ": " + ports.FirstOrDefault(s => s.Contains(n))).ToList();
+                var portDescriptions = searcher.Get().Cast<ManagementBaseObject>().ToList().Select(p => p["Caption"].ToString() + " " + p["Manufacturer"]);
+                var portDescriptionsList = portnames.Select(n => n + ": " + portDescriptions.FirstOrDefault(s => s.Contains(n))).ToList();
                 String[] searchOns = searchOn.Split(',');
-                foreach (String p in portList)
+                foreach (String p in portDescriptionsList)
                 {
                     String[] parts = p.Split(':');
                     if (parts.Length > 1)
                     {
                         foreach (String toFind in searchOns)
                         {
-                            if(parts[1].Contains(toFind.Trim()) && !foundPorts.Contains(parts[0])) foundPorts.Add(parts[0]);
+                            String[] toFindParts = toFind.Split('&');
+                            int findcount = 0;
+                            foreach (String toFindPart in toFindParts)
+                            {
+                                if (parts[1].Contains(toFindPart.Trim())) findcount++;
+                            }
+                            if (findcount == toFindParts.Length && !foundPorts.Contains(parts[0]))
+                            {
+                                foundPorts.Add(parts[0]);
+                            }
                         }
                     }
-                }
-            }
+                } //end loooping through possible candidates
+            } //end using searcher
 
             return foundPorts;
         }
