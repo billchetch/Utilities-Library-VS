@@ -45,6 +45,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CheckSum.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="BasicEncryption.cs" />
     <Compile Include="DataSourceObject.cs" />

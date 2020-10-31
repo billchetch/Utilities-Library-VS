@@ -20,7 +20,7 @@ namespace Chetch.Utilities
             private Object _peekBufferLock = new Object();
             private Queue<int> _peekBuffer = new Queue<int>();
 
-            new public int BytesToRead { get => _peekBuffer.Count + base.BytesToRead; } //Question: peekbuffer stores -1 which may lead to the wrong value as base.BytesToRead may not contain that
+            new public int BytesToRead { get => IsOpen ? _peekBuffer.Count + base.BytesToRead : -1; } //Question: peekbuffer stores -1 which may lead to the wrong value as base.BytesToRead may not contain that
 
             public SerialPort(String port, int baud) : base(port, baud) { }
 
