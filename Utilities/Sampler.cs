@@ -182,6 +182,7 @@ namespace Chetch.Utilities
         private System.Timers.Timer _timer;
         private int _timerCount = 0;
         private int _maxTimerInterval = 0;
+        private int _maxDelay = 0; //time to wait between calling multiple requests at the same timer interval
 
         public void Add(ISampleSubject subject, int interval, int sampleSize, SamplingOptions samplingOptions = SamplingOptions.MEAN_COUNT, int intervalDeviation = -1)
         {
@@ -258,8 +259,10 @@ namespace Chetch.Utilities
             }
             _timer.Interval = Math.GCD(intervals.ToArray());
             _timer.Elapsed += OnTimer;
-            _timer.Start();
             _maxTimerInterval = Math.LCM(intervals.ToArray());
+            _maxDelay = (int)(_timer.Interval / (double)(intervals.Count + 1));
+            _timer.Start();
+
         }
 
         public void Stop()
@@ -271,6 +274,7 @@ namespace Chetch.Utilities
         {
             if (sender is System.Timers.Timer)
             {
+                _timer.Stop();
                 _timerCount++;
                 int interval = (int)((System.Timers.Timer)sender).Interval;
                 int timerInterval = _timerCount * interval;
@@ -280,13 +284,10 @@ namespace Chetch.Utilities
                     {
                         try
                         {
-                            lock (LockRequestSample)
-                            {
-                                sd.Subject.RequestSample(this);
-                            }
-                        } catch (Exception e)
+                            sd.Subject.RequestSample(this);
+                        }
+                        catch (Exception e)
                         {
-                            sd.CanRequest = false;
                             SampleError?.Invoke(sd.Subject, e);
                         }
                     }
@@ -296,6 +297,8 @@ namespace Chetch.Utilities
                 {
                     _timerCount = 0;
                 }
+
+                _timer.Start();
             }
         }
     } //end class
