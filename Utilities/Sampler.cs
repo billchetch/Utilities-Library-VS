@@ -179,6 +179,7 @@ namespace Chetch.Utilities
         public event SampleProvidedHandler SampleProvided;
         public event SampleErrorHandler SampleError;
 
+        public bool IsSampling { get; internal set; } = false;
         private System.Timers.Timer _timer;
         private int _timerCount = 0;
         private int _maxTimerInterval = 0;
@@ -267,7 +268,15 @@ namespace Chetch.Utilities
 
         public void Stop()
         {
-            if(_timer != null)_timer.Stop();
+            if (_timer != null)
+            {
+                _timer.Stop();
+                while (IsSampling)
+                {
+                    System.Threading.Thread.Sleep(250);
+                }
+            }
+
         }
 
         void OnTimer(Object sender, System.Timers.ElapsedEventArgs eventArgs)
@@ -275,6 +284,7 @@ namespace Chetch.Utilities
             if (sender is System.Timers.Timer)
             {
                 _timer.Stop();
+                IsSampling = true;
                 _timerCount++;
                 int interval = (int)((System.Timers.Timer)sender).Interval;
                 int timerInterval = _timerCount * interval;
@@ -298,6 +308,7 @@ namespace Chetch.Utilities
                     _timerCount = 0;
                 }
 
+                IsSampling = false;
                 _timer.Start();
             }
         }
