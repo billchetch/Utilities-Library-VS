@@ -172,7 +172,7 @@ namespace Chetch.Utilities
 
         private static object LockRequestSample = new Object();
 
-        public delegate void SampleProvidedHandler(ISampleSubject sampleSubject);
+        public delegate void SampleProvidedHandler(Sampler sampler, ISampleSubject sampleSubject);
         public delegate void SampleErrorHandler(ISampleSubject sampleSubject, Exception e);
 
         private Dictionary<ISampleSubject, SubjectData> _subjects2data = new Dictionary<ISampleSubject, SubjectData>();
@@ -209,7 +209,7 @@ namespace Chetch.Utilities
             SubjectData sd = _subjects2data[subject];
             sd.AddSample(sample, interval);
 
-            SampleProvided?.Invoke(subject);
+            SampleProvided?.Invoke(this, subject);
 
             return sd.Average;
         }
