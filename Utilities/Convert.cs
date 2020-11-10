@@ -260,7 +260,7 @@ namespace Chetch.Utilities
             return (int)ToLong(bytes, littleEndian);
         }
 
-        static float ToFloat(byte[] bytes, bool littleEndian = true)
+        public static float ToFloat(byte[] bytes, bool littleEndian = true)
         {
             if (BitConverter.IsLittleEndian != littleEndian) Array.Reverse(bytes);
             return BitConverter.ToSingle(bytes, 0);
