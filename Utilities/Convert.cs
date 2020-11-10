@@ -243,5 +243,28 @@ namespace Chetch.Utilities
             return (byte)System.Convert.ToInt16(obj);
         }
 
+        public static long ToLong(byte[] bytes, bool littleEndian = true)
+        {
+            long n = 0;
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                int idx = littleEndian ? i : bytes.Length - (i + 1);
+                long b = (long)bytes[i];
+                n += b << 8 * i;
+            }
+            return n;
+        }
+
+        public static int ToInt(byte[] bytes, bool littleEndian = true)
+        {
+            return (int)ToLong(bytes, littleEndian);
+        }
+
+        static float ToFloat(byte[] bytes, bool littleEndian = true)
+        {
+            if (BitConverter.IsLittleEndian != littleEndian) Array.Reverse(bytes);
+            return BitConverter.ToSingle(bytes, 0);
+        }
+
     } //end of class 
 }
