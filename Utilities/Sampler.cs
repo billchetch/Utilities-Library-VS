@@ -78,7 +78,7 @@ namespace Chetch.Utilities
                 bool rejectSample = false;
 
                 //First one is if we care about how much the interval deviates from the expected Interval
-                if (IntervalDeviation >= 0 && System.Math.Abs(interval2add - Interval) > IntervalDeviation)
+                if (interval > 0 && IntervalDeviation >= 0 && System.Math.Abs(interval2add - Interval) > IntervalDeviation)
                 {
                     rejectSample = true;
                 }
