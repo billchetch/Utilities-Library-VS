@@ -29,6 +29,7 @@ namespace Chetch.Utilities
             public ISampleSubject Subject;
             public bool CanRequest { get; set; } = true;
             public int Interval { get; set; } = 0;
+            public int IntervalShift { get; set; } = 0; //can be set by sampler to distribute sample requests
             public int IntervalDeviation { get; set; } = -1; //quality control... can reject samples that deviate too far from the ideal 'Interval'
             public int SampleSize { get; set; } = 0;
             
@@ -36,6 +37,7 @@ namespace Chetch.Utilities
             public List<long> SampleTimes { get; } = new List<long>();
             private DateTime _lastAddSampleAttempt;
             public List<long> SampleIntervals { get; } = new List<long>();
+            
 
             public double SampleTotal { get; internal set; } = 0; //sum of sample values
             public int SampleCount { get; internal set; } = 0;
@@ -43,6 +45,7 @@ namespace Chetch.Utilities
             public double Average { get; internal set; }
             public SamplingOptions Options;
             public Measurement.Unit MeasurementUnit = Measurement.Unit.NONE;
+
             
             public SubjectData(ISampleSubject subject, int interval, int sampleSize, SamplingOptions samplingOptions, int intervalDeviation)
             {
@@ -181,9 +184,10 @@ namespace Chetch.Utilities
 
         public bool IsSampling { get; internal set; } = false;
         private System.Timers.Timer _timer;
-        private int _timerCount = 0;
+        public int TimerTicks { get; internal set; } = 0;
         private int _maxTimerInterval = 0;
-        private int _maxDelay = 0; //time to wait between calling multiple requests at the same timer interval
+        public bool DistributeSampleRequests { get; set; } = true; //space out sample requests so they don't all fall on the same 'tick'
+
 
         public void Add(ISampleSubject subject, int interval, int sampleSize, SamplingOptions samplingOptions = SamplingOptions.MEAN_COUNT, int intervalDeviation = -1)
         {
@@ -253,15 +257,37 @@ namespace Chetch.Utilities
         {
             if (_subjects2data.Count == 0) return;
             _timer = new System.Timers.Timer();
+
             List<int> intervals = new List<int>();
-            foreach(var sd in _subjects2data.Values)
+            foreach (var sd in _subjects2data.Values)
             {
-                intervals.Add(sd.Interval);
+                if(!intervals.Contains(sd.Interval))intervals.Add(sd.Interval);
             }
-            _timer.Interval = Math.GCD(intervals.ToArray());
+            int timerInterval = Math.GCD(intervals.ToArray());
+
+            if (DistributeSampleRequests && _subjects2data.Values.Count > 1)
+            {
+                //we need the smallest divisor for the time interval > tthe number of subjects
+                int divisor = _subjects2data.Values.Count + 1;
+                while(timerInterval % divisor != 0)
+                {
+                    if ((timerInterval / divisor) < 20) throw new Exception("Cannot distribute sample subjects as it will result in a timer interval of less than 20.");
+                    divisor++;
+                }
+                timerInterval = timerInterval / divisor;
+                
+                //now we have a fine-grained enough timer so we can shift all the subjects so that never more than one subject is called per timer tick
+                int i = 0;
+                foreach(var sd in _subjects2data.Values)
+                {
+                    sd.IntervalShift = i * timerInterval;
+                    i++;
+                }
+            }
+
+            _timer.Interval = timerInterval;
             _timer.Elapsed += OnTimer;
             _maxTimerInterval = Math.LCM(intervals.ToArray());
-            _maxDelay = (int)(_timer.Interval / (double)(intervals.Count + 1));
             _timer.Start();
 
         }
@@ -285,12 +311,12 @@ namespace Chetch.Utilities
             {
                 _timer.Stop();
                 IsSampling = true;
-                _timerCount++;
+                TimerTicks++;
                 int interval = (int)((System.Timers.Timer)sender).Interval;
-                int timerInterval = _timerCount * interval;
+                int timerInterval = TimerTicks * interval;
                 foreach(var sd in _subjects2data.Values)
                 {
-                    if (timerInterval % sd.Interval == 0 && sd.CanRequest)
+                    if (timerInterval % sd.Interval == sd.IntervalShift && sd.CanRequest)
                     {
                         try
                         {
@@ -305,7 +331,7 @@ namespace Chetch.Utilities
 
                 if (timerInterval % _maxTimerInterval == 0)
                 {
-                    _timerCount = 0;
+                    TimerTicks = 0;
                 }
 
                 IsSampling = false;
