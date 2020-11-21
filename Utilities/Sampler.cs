@@ -202,7 +202,10 @@ namespace Chetch.Utilities
         {
             if(_subjects2data.ContainsKey(subject))
             {
-                _subjects2data.Remove(subject);
+                lock (_subjects2data)
+                {
+                    _subjects2data.Remove(subject);
+                }
             }
         }
 
@@ -310,31 +313,34 @@ namespace Chetch.Utilities
             if (sender is System.Timers.Timer)
             {
                 _timer.Stop();
-                IsSampling = true;
-                TimerTicks++;
-                int interval = (int)((System.Timers.Timer)sender).Interval;
-                int timerInterval = TimerTicks * interval;
-                foreach(var sd in _subjects2data.Values)
+                lock (_subjects2data)
                 {
-                    if (timerInterval % sd.Interval == sd.IntervalShift && sd.CanRequest)
+                    IsSampling = true;
+                    TimerTicks++;
+                    int interval = (int)((System.Timers.Timer)sender).Interval;
+                    int timerInterval = TimerTicks * interval;
+                    foreach (var sd in _subjects2data.Values)
                     {
-                        try
+                        if (timerInterval % sd.Interval == sd.IntervalShift && sd.CanRequest)
                         {
-                            sd.Subject.RequestSample(this);
-                        }
-                        catch (Exception e)
-                        {
-                            SampleError?.Invoke(sd.Subject, e);
+                            try
+                            {
+                                sd.Subject.RequestSample(this);
+                            }
+                            catch (Exception e)
+                            {
+                                SampleError?.Invoke(sd.Subject, e);
+                            }
                         }
                     }
-                }
 
-                if (timerInterval % _maxTimerInterval == 0)
-                {
-                    TimerTicks = 0;
-                }
+                    if (timerInterval % _maxTimerInterval == 0)
+                    {
+                        TimerTicks = 0;
+                    }
 
-                IsSampling = false;
+                    IsSampling = false;
+                }
                 _timer.Start();
             }
         }
