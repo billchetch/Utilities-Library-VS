@@ -304,6 +304,8 @@ namespace Chetch.Utilities
                 {
                     System.Threading.Thread.Sleep(250);
                 }
+                _timer.Dispose();
+                _timer = null;
             }
 
         }
