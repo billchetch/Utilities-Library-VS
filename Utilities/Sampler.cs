@@ -182,10 +182,12 @@ namespace Chetch.Utilities
         public event SampleProvidedHandler SampleProvided;
         public event SampleErrorHandler SampleError;
 
+        public int SubjectCount { get { return _subjects2data.Count;  } }
         public bool IsSampling { get; internal set; } = false;
         private System.Timers.Timer _timer;
         public int TimerTicks { get; internal set; } = 0;
         private int _maxTimerInterval = 0;
+        public int TickTime { get { return _timer == null ? -1 : (int)_timer.Interval;  } }
         public bool DistributeSampleRequests { get; set; } = true; //space out sample requests so they don't all fall on the same 'tick'
 
 
@@ -259,6 +261,8 @@ namespace Chetch.Utilities
         public void Start()
         {
             if (_subjects2data.Count == 0) return;
+            if (_timer != null) throw new Exception("Cannot start sampling as a timer already exists");
+
             _timer = new System.Timers.Timer();
 
             List<int> intervals = new List<int>();
