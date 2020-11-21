@@ -261,7 +261,10 @@ namespace Chetch.Utilities
         public void Start()
         {
             if (_subjects2data.Count == 0) return;
-            if (_timer != null) throw new Exception("Cannot start sampling as a timer already exists");
+            if (_timer != null)
+            {
+                throw new Exception("Cannot start sampling as a timer already exists");
+            }
 
             _timer = new System.Timers.Timer();
 
