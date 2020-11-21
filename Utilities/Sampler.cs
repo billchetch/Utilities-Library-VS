@@ -187,7 +187,7 @@ namespace Chetch.Utilities
         private System.Timers.Timer _timer;
         public int TimerTicks { get; internal set; } = 0;
         private int _maxTimerInterval = 0;
-        public int TickTime { get { return _timer == null ? -1 : (int)_timer.Interval;  } }
+        public int TimerInterval { get { return _timer == null ? -1 : (int)_timer.Interval;  } }
         public bool DistributeSampleRequests { get; set; } = true; //space out sample requests so they don't all fall on the same 'tick'
 
 
