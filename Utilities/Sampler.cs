@@ -277,8 +277,8 @@ namespace Chetch.Utilities
 
             if (DistributeSampleRequests && _subjects2data.Values.Count > 1)
             {
-                //we need the smallest divisor for the time interval > tthe number of subjects
-                int divisor = _subjects2data.Values.Count + 1;
+                //we need the smallest divisor for the time interval >= the number of subjects
+                int divisor = _subjects2data.Values.Count;
                 while(timerInterval % divisor != 0)
                 {
                     if ((timerInterval / divisor) < 20) throw new Exception("Cannot distribute sample subjects as it will result in a timer interval of less than 20.");
