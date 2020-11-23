@@ -184,6 +184,8 @@ namespace Chetch.Utilities
 
         public int SubjectCount { get { return _subjects2data.Count;  } }
         public bool IsSampling { get; internal set; } = false;
+        public bool IsRunning { get; internal set; } = false;
+
         private System.Timers.Timer _timer;
         public int TimerTicks { get; internal set; } = 0;
         private int _maxTimerInterval = 0;
@@ -300,10 +302,12 @@ namespace Chetch.Utilities
             _maxTimerInterval = Math.LCM(intervals.ToArray());
             _timer.Start();
 
+            IsRunning = true;
         }
 
         public void Stop()
         {
+            IsRunning = false;
             if (_timer != null)
             {
                 _timer.Stop();
