@@ -12,6 +12,7 @@ namespace Chetch.Utilities
     public interface ISampleSubject
     {
         void RequestSample(Sampler sampler);
+        bool Enabled { get; }
     }
 
     public class Sampler
@@ -27,7 +28,6 @@ namespace Chetch.Utilities
         public class SubjectData
         {
             public ISampleSubject Subject;
-            public bool CanRequest { get; set; } = true;
             public int Interval { get; set; } = 0;
             public int IntervalShift { get; set; } = 0; //can be set by sampler to distribute sample requests
             public int IntervalDeviation { get; set; } = -1; //quality control... can reject samples that deviate too far from the ideal 'Interval'
@@ -334,7 +334,7 @@ namespace Chetch.Utilities
                     int timerInterval = TimerTicks * interval;
                     foreach (var sd in _subjects2data.Values)
                     {
-                        if (timerInterval % sd.Interval == sd.IntervalShift && sd.CanRequest)
+                        if (timerInterval % sd.Interval == sd.IntervalShift && sd.Subject.Enabled)
                         {
                             try
                             {
