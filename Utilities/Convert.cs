@@ -177,12 +177,17 @@ namespace Chetch.Utilities
             }
         }
 
-        public static byte[] ToBytes(Int64 n, bool removeZeroBytePadding = true)
+        public static byte[] ToBytes(Int64 n, bool removeZeroBytePadding = true, int padToLength = -1)
         {
-            return ToBytes(n, BitConverter.IsLittleEndian, removeZeroBytePadding);
+            return ToBytes(n, BitConverter.IsLittleEndian, removeZeroBytePadding, padToLength);
         }
 
-        public static byte[] ToBytes(Int64 n, bool littleEndian, bool removeZeroBytePadding = true)
+        public static byte[] ToBytes(Int64 n, int padToLength = -1)
+        {
+            return ToBytes(n, BitConverter.IsLittleEndian, true, padToLength);
+        }
+
+        public static byte[] ToBytes(Int64 n, bool littleEndian, bool removeZeroBytePadding = true, int padToLength = -1)
         {
             var bytes = BitConverter.GetBytes(n);
 
@@ -216,6 +221,13 @@ namespace Chetch.Utilities
                     bts[i - startIdx] = bytes[i];
                 }
                 bytes = bts;
+            }
+
+            if(padToLength > bytes.Length)
+            {
+                byte[] padded = new byte[padToLength];
+                Array.Copy(bytes, 0, padded, littleEndian ? 0 : padToLength - bytes.Length, bytes.Length);
+                bytes = padded;
             }
 
             return bytes;
