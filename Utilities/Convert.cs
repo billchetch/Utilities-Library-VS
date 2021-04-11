@@ -159,17 +159,23 @@ namespace Chetch.Utilities
             return bytes;
         }
 
-        public static byte[] ToBytes(ValueType n, bool removeZeroBytePadding = true)
+        public static byte[] ToBytes(ValueType n, bool removeZeroBytePadding = true, int padToLength = -1)
         {
-            return ToBytes(n, BitConverter.IsLittleEndian, removeZeroBytePadding);
+            return ToBytes(n, BitConverter.IsLittleEndian, removeZeroBytePadding, padToLength);
         }
 
-        public static byte[] ToBytes(ValueType n, bool littleEndian, bool removeZeroBytePadding = true)
+
+        public static byte[] ToBytes(ValueType n, int padToLength)
+        {
+            return ToBytes(n, BitConverter.IsLittleEndian, true, padToLength);
+        }
+
+        public static byte[] ToBytes(ValueType n, bool littleEndian, bool removeZeroBytePadding = true, int padToLength = -1)
         {
             int sz = System.Runtime.InteropServices.Marshal.SizeOf(n);
             if (sz <= sizeof(System.Int64))
             {
-                return ToBytes(System.Convert.ToInt64(n), littleEndian, removeZeroBytePadding);
+                return ToBytes(System.Convert.ToInt64(n), littleEndian, removeZeroBytePadding, padToLength);
             }
             else
             {
