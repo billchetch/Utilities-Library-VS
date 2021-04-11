@@ -182,7 +182,7 @@ namespace Chetch.Utilities
             return ToBytes(n, BitConverter.IsLittleEndian, removeZeroBytePadding, padToLength);
         }
 
-        public static byte[] ToBytes(Int64 n, int padToLength = -1)
+        public static byte[] ToBytes(Int64 n, int padToLength)
         {
             return ToBytes(n, BitConverter.IsLittleEndian, true, padToLength);
         }
