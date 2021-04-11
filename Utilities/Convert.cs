@@ -177,9 +177,9 @@ namespace Chetch.Utilities
             }
         }
 
-        public static byte[] ToBytes(Int64 n)
+        public static byte[] ToBytes(Int64 n, bool removeZeroBytePadding = true)
         {
-            return ToBytes(n, BitConverter.IsLittleEndian);
+            return ToBytes(n, BitConverter.IsLittleEndian, removeZeroBytePadding);
         }
 
         public static byte[] ToBytes(Int64 n, bool littleEndian, bool removeZeroBytePadding = true)
