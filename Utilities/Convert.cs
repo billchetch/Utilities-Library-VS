@@ -193,7 +193,7 @@ namespace Chetch.Utilities
             return ToBytes(n, BitConverter.IsLittleEndian, true, padToLength);
         }
 
-        public static byte[] ToBytes(Int64 n, bool littleEndian, bool removeZeroBytePadding = true, int padToLength = -1)
+        public static byte[] ToBytes(Int64 n, bool littleEndian, bool removeZeroBytePadding, int padToLength = -1)
         {
             var bytes = BitConverter.GetBytes(n);
 
