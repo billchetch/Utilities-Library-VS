@@ -40,6 +40,15 @@ namespace Chetch.Utilities.Streams
         public const byte END_BYTE = 0x64;
         public const byte EVENT_BYTE = 0x73;
 
+        enum Event
+        {
+            RESET = 1,
+            RECEIVE_BUFFER_FULL = 2,
+            CHECKSUM_FAILED = 3,
+            UNKNOWN_ERROR = 4,
+            ALL_OK = 5
+        };
+
         private IStream _stream;
         private bool _cts = true;
         private int _bytesSent = 0;
@@ -90,7 +99,7 @@ namespace Chetch.Utilities.Streams
             _receiveThread = new Thread(Receive);
             _receiveThread.Start();
 
-            Reset();
+            Reset(true, false);
         }
 
 
@@ -139,7 +148,7 @@ namespace Chetch.Utilities.Streams
                 for (int i = 0; i < n; i++)
                 {
                     byte b = readBuffer[i];
-                    //Console.WriteLine("<--- Received: {0}", b);
+                    Console.WriteLine("<--- Received: {0}", b);
                     if (revent)
                     {
                         isData = false;
@@ -164,6 +173,7 @@ namespace Chetch.Utilities.Streams
                         switch (b)
                         {
                             case RESET_BYTE:
+                                Reset(false, true);
                                 return;
 
                             case SLASH_BYTE:
@@ -257,17 +267,24 @@ namespace Chetch.Utilities.Streams
             }
         }
 
-        public void Reset()
+        public void SendEvent(byte e)
+        {
+            sendByte(EVENT_BYTE);
+            sendByte(e);
+        }
+
+        public void Reset(bool resetRemote = false, bool sendEventByte = false)
         {
             lock (_sendBufferLock)
             {
                 _sendBuffer.Clear();
             }
-            sendByte(RESET_BYTE);
+            if(resetRemote)sendByte(RESET_BYTE);
             while (_sendBuffer.Count > 0) { }; //wait for the send buffer to empty
             _cts = true;
             _bytesSent = 0;
             _bytesReceived = 0;
+            if (sendEventByte) SendEvent(Event.RESET);
         }
 
         public void Send(byte[] bytes)
@@ -288,7 +305,7 @@ namespace Chetch.Utilities.Streams
             for (int n = 0; n < bytes.Count; n++)
             {
                 byte b = bytes[n];
-                switch (b)
+                /*switch (b)
                 {
                     case CTS_BYTE:
                     case SLASH_BYTE:
@@ -298,6 +315,10 @@ namespace Chetch.Utilities.Streams
                     case EVENT_BYTE:
                         bytes2send.Add(SLASH_BYTE);
                         break;
+                }*/
+                if (IsSystemByte(b))
+                {
+                    bytes2send.Add(SLASH_BYTE);
                 }
                 bytes2send.Add(b);
             }
