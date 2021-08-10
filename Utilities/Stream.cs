@@ -40,7 +40,7 @@ namespace Chetch.Utilities.Streams
         public const byte END_BYTE = 0x64;
         public const byte EVENT_BYTE = 0x73;
 
-        enum Event
+        public enum Event
         {
             RESET = 1,
             RECEIVE_BUFFER_FULL = 2,
@@ -271,6 +271,11 @@ namespace Chetch.Utilities.Streams
         {
             sendByte(EVENT_BYTE);
             sendByte(e);
+        }
+
+        public void SendEvent(Event e)
+        {
+            SendEvent((byte)e);
         }
 
         public void Reset(bool resetRemote = false, bool sendEventByte = false)
