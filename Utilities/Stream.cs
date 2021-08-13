@@ -23,6 +23,16 @@ namespace Chetch.Utilities.Streams
 
     public class StreamFlowController
     {
+        public class CommandByteArgs : EventArgs
+        {
+            public byte CommandByte { get; internal set; }
+
+            public CommandByteArgs(byte cb)
+            {
+                CommandByte = cb;
+            }
+        }
+
         public class EventByteArgs : EventArgs
         {
             public byte EventByte { get; internal set; }
@@ -33,12 +43,22 @@ namespace Chetch.Utilities.Streams
             }
         }
 
-        public const byte RESET_BYTE = 0x63;
+        public const byte COMMAND_BYTE = 0x63;
         public const byte CTS_BYTE = 0x74;
         public const byte SLASH_BYTE = 0x5c;
         public const byte PAD_BYTE = 0x70;
         public const byte END_BYTE = 0x64;
         public const byte EVENT_BYTE = 0x73;
+
+        public enum Command
+        {
+            RESET = 1,
+            DEBUG_ON = 2,
+            DEBUG_OFF = 3,
+            TIMEOUT_ALERT_ONLY = 4,
+            TIMEOUT_ALERT_AND_SET_CTS = 5,
+            REQUEST_STATUS = 100, //100 and above are general but require user definition (by convention above 200 is completely user-specific)
+        };
 
         public enum Event
         {
@@ -46,8 +66,11 @@ namespace Chetch.Utilities.Streams
             RECEIVE_BUFFER_FULL = 2,
             CHECKSUM_FAILED = 3,
             UNKNOWN_ERROR = 4,
-            ALL_OK = 5
+            ALL_OK = 5,
+            CTS_TIMEOUT = 6
         };
+
+        
 
         private IStream _stream;
         private bool _cts = true;
@@ -70,7 +93,11 @@ namespace Chetch.Utilities.Streams
         //List<byte> _receiveHistory = new List<byte>();
 
         public event EventHandler DataBlockReceived;
+        public event EventHandler<CommandByteArgs> CommandByteReceived;
         public event EventHandler<EventByteArgs> EventByteReceived;
+
+        public delegate bool ReadyToReceiveHandler(StreamFlowController);
+        public ReadyToReceiveHandler ReadyToReceive = null;
 
 
         /*public SerialPortX(String port, int baud, int localBufferSize, int remoteBufferSize) : base(port, baud)
@@ -113,7 +140,7 @@ namespace Chetch.Utilities.Streams
         {
             switch (b)
             {
-                case RESET_BYTE:
+                case COMMAND_BYTE:
                 case CTS_BYTE:
                 case SLASH_BYTE:
                 case PAD_BYTE:
@@ -135,6 +162,7 @@ namespace Chetch.Utilities.Streams
 
         protected void Receive()
         {
+            bool rcommand = false;
             bool revent = false;
             bool isData = false;
             bool slashed = false;
@@ -149,7 +177,17 @@ namespace Chetch.Utilities.Streams
                 {
                     byte b = readBuffer[i];
                     Console.WriteLine("<--- Received: {0}", b);
-                    if (revent)
+                    if (rcommand)
+                    {
+                        isData = false;
+                        rcommand = false; //we do not count
+
+                        if (CommandByteReceived != null)
+                        {
+                            CommandByteReceived(this, new CommandByteArgs(b));
+                        }
+                    }
+                    else if (revent)
                     {
                         isData = false;
                         revent = false; //we do not count
@@ -172,10 +210,6 @@ namespace Chetch.Utilities.Streams
 
                         switch (b)
                         {
-                            case RESET_BYTE:
-                                Reset(false, true);
-                                return;
-
                             case SLASH_BYTE:
                                 slashed = true;
                                 //Console.WriteLine("<- SLASH");
@@ -191,6 +225,11 @@ namespace Chetch.Utilities.Streams
                                 }
                                 ReceiveBuffer.Clear();
                                 break;
+
+                            case COMMAND_BYTE:
+                                rcommand = true;
+                                break;
+
 
                             case EVENT_BYTE:
                                 revent = true;
@@ -223,13 +262,9 @@ namespace Chetch.Utilities.Streams
                         //_prevByte = b;
                     }
 
-                    if (requiresCTS(_bytesReceived, _uartLocalBufferSize))
-                    {
-                        //Console.WriteLine("----> CTS ... sent/received {0}/{1}", _bytesSent, _bytesReceived);
-                        _bytesReceived = 0;
-                        sendByte(CTS_BYTE);
-                    }
-
+                    //send cts (check function body for conditions
+                    sendCTS();
+                    
                     //prevRecvByte = b;
                 } //end read bytes loop
             } // end  while is open loop
@@ -267,10 +302,49 @@ namespace Chetch.Utilities.Streams
             }
         }
 
-        public void SendEvent(byte e)
+        private bool isReadyToReceive()
+        {
+            if (ReadyToReceive != null)
+            {
+                return ReadyToReceive(this);
+            }
+            else
+            {
+                return _sendBuffer.Count == 0;`
+            }
+        }
+
+        private bool sendCTS()
+        {
+            if (requiresCTS(_bytesReceived, _uartLocalBufferSize) && isReadyToReceive())
+            {
+                //Console.WriteLine("----> CTS ... sent/received {0}/{1}", _bytesSent, _bytesReceived);
+                _bytesReceived = 0;
+                sendByte(CTS_BYTE);
+                return true;
+            } 
+            else
+            {
+                return false;
+            }
+        }
+
+
+        public void SendCommand(byte b)
+        {
+            sendByte(COMMAND_BYTE);
+            sendByte(b);
+        }
+
+        public void SendCommand(Command c)
+        {
+            SendCommand((byte)c);
+        }
+
+        public void SendEvent(byte b)
         {
             sendByte(EVENT_BYTE);
-            sendByte(e);
+            sendByte(b);
         }
 
         public void SendEvent(Event e)
@@ -278,13 +352,15 @@ namespace Chetch.Utilities.Streams
             SendEvent((byte)e);
         }
 
+        
+
         public void Reset(bool resetRemote = false, bool sendEventByte = false)
         {
             lock (_sendBufferLock)
             {
                 _sendBuffer.Clear();
             }
-            if(resetRemote)sendByte(RESET_BYTE);
+            if(resetRemote)SendCommand(Command.RESET);
             while (_sendBuffer.Count > 0) { }; //wait for the send buffer to empty
             _cts = true;
             _bytesSent = 0;
@@ -310,17 +386,6 @@ namespace Chetch.Utilities.Streams
             for (int n = 0; n < bytes.Count; n++)
             {
                 byte b = bytes[n];
-                /*switch (b)
-                {
-                    case CTS_BYTE:
-                    case SLASH_BYTE:
-                    case END_BYTE:
-                    case RESET_BYTE:
-                    case PAD_BYTE:
-                    case EVENT_BYTE:
-                        bytes2send.Add(SLASH_BYTE);
-                        break;
-                }*/
                 if (IsSystemByte(b))
                 {
                     bytes2send.Add(SLASH_BYTE);
