@@ -96,7 +96,7 @@ namespace Chetch.Utilities.Streams
         public event EventHandler<CommandByteArgs> CommandByteReceived;
         public event EventHandler<EventByteArgs> EventByteReceived;
 
-        public delegate bool ReadyToReceiveHandler(StreamFlowController);
+        public delegate bool ReadyToReceiveHandler(StreamFlowController sfc);
         public ReadyToReceiveHandler ReadyToReceive = null;
 
 
