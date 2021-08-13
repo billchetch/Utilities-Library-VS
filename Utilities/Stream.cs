@@ -310,7 +310,7 @@ namespace Chetch.Utilities.Streams
             }
             else
             {
-                return _sendBuffer.Count == 0;`
+                return _sendBuffer.Count == 0;
             }
         }
 
