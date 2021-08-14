@@ -81,9 +81,7 @@ namespace Chetch.Utilities.Streams
         private int _bytesReceived = 0;
         private int _uartLocalBufferSize = 0;
         private int _uartRemoteBufferSize = 0;
-        private int _receiveBufferSize = 0;
-        private int _sendBufferSize = 0;
-
+        
         private Object _writeLock = new Object();
         public List<byte> ReceiveBuffer { get; internal set; } = new List<byte>();
 
@@ -116,13 +114,11 @@ namespace Chetch.Utilities.Streams
         public SerialPortX(String port, int baud, int bufferSize) : this(port, baud, bufferSize, bufferSize)
         {}*/
 
-        public StreamFlowController(IStream stream, int localBufferSize, int remoteBufferSize, int receiveBufferSize = 1024, int sendBufferSize = 1024)
+        public StreamFlowController(IStream stream, int localBufferSize, int remoteBufferSize)
         {
             _stream = stream;
             _uartLocalBufferSize = localBufferSize;
             _uartRemoteBufferSize = remoteBufferSize;
-            _receiveBufferSize = receiveBufferSize;
-            _sendBufferSize = sendBufferSize;
         }
 
         public void Open()
