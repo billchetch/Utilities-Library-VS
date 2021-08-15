@@ -175,100 +175,107 @@ namespace Chetch.Utilities.Streams
             {
                 //readBuffer = new byte[1024];
                 int n = _stream.Read(readBuffer, 0, readBuffer.Length);
-                for (int i = 0; i < n; i++)
+                if (n <= 0)
                 {
-                    byte b = readBuffer[i];
-                    Console.WriteLine("<--- Received: {0}", b);
-                    if (rcommand)
-                    {
-                        isData = false;
-                        rcommand = false; //we do not count
-
-                        if (CommandByteReceived != null)
-                        {
-                            CommandByteReceived(this, new CommandByteArgs(b));
-                        }
-                    }
-                    else if (revent)
-                    {
-                        isData = false;
-                        revent = false; //we do not count
-
-                        if (EventByteReceived != null)
-                        {
-                            EventByteReceived(this, new EventByteArgs(b));
-                        }
-                    }
-                    else if (slashed)
-                    {
-                        isData = true;
-                        slashed = false;
-                        _bytesReceived++;
-                    }
-                    else if (IsSystemByte(b))
-                    {
-                        isData = false;
-                        if (b != CTS_BYTE && b != EVENT_BYTE) _bytesReceived++;
-
-                        switch (b)
-                        {
-                            case SLASH_BYTE:
-                                slashed = true;
-                                //Console.WriteLine("<- SLASH");
-                                break;
-
-                            case PAD_BYTE:
-                                break;
-
-                            case END_BYTE:
-                                if (DataBlockReceived != null)
-                                {
-                                    DataBlockReceived(this, null);
-                                }
-                                ReceiveBuffer.Clear();
-                                break;
-
-                            case COMMAND_BYTE:
-                                rcommand = true;
-                                break;
-
-
-                            case EVENT_BYTE:
-                                revent = true;
-                                break;
-
-                            case CTS_BYTE:
-                                Console.WriteLine("<--- CTS (bytes sent/received {0}/{1})", _bytesSent, _bytesReceived);
-
-                                lock (_writeLock)
-                                {
-                                    _bytesSent = 0; //Note: important tha we set _bytesSent BEFORE _cts so that the send loop starts again with _bytesSent already reset
-                                    _cts = true;
-                                }
-                                break;
-
-                            default:
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        _bytesReceived++;
-                        isData = true;
-                    }
-
-                    //temp
-                    if (isData)
-                    {
-                        ReceiveBuffer.Add(b);
-                        //_prevByte = b;
-                    }
-
-                    //send cts (check function body for conditions
                     sendCTS();
-                    
-                    //prevRecvByte = b;
-                } //end read bytes loop
+                }
+                else
+                {
+                    for (int i = 0; i < n; i++)
+                    {
+                        byte b = readBuffer[i];
+                        Console.WriteLine("<--- Received: {0}", b);
+                        if (rcommand)
+                        {
+                            isData = false;
+                            rcommand = false; //we do not count
+
+                            if (CommandByteReceived != null)
+                            {
+                                CommandByteReceived(this, new CommandByteArgs(b));
+                            }
+                        }
+                        else if (revent)
+                        {
+                            isData = false;
+                            revent = false; //we do not count
+
+                            if (EventByteReceived != null)
+                            {
+                                EventByteReceived(this, new EventByteArgs(b));
+                            }
+                        }
+                        else if (slashed)
+                        {
+                            isData = true;
+                            slashed = false;
+                            _bytesReceived++;
+                        }
+                        else if (IsSystemByte(b))
+                        {
+                            isData = false;
+                            if (b != CTS_BYTE && b != EVENT_BYTE) _bytesReceived++;
+
+                            switch (b)
+                            {
+                                case SLASH_BYTE:
+                                    slashed = true;
+                                    //Console.WriteLine("<- SLASH");
+                                    break;
+
+                                case PAD_BYTE:
+                                    break;
+
+                                case END_BYTE:
+                                    if (DataBlockReceived != null)
+                                    {
+                                        DataBlockReceived(this, null);
+                                    }
+                                    ReceiveBuffer.Clear();
+                                    break;
+
+                                case COMMAND_BYTE:
+                                    rcommand = true;
+                                    break;
+
+
+                                case EVENT_BYTE:
+                                    revent = true;
+                                    break;
+
+                                case CTS_BYTE:
+                                    Console.WriteLine("<--- CTS (bytes sent/received {0}/{1})", _bytesSent, _bytesReceived);
+
+                                    lock (_writeLock)
+                                    {
+                                        _bytesSent = 0; //Note: important tha we set _bytesSent BEFORE _cts so that the send loop starts again with _bytesSent already reset
+                                        _cts = true;
+                                    }
+                                    break;
+
+                                default:
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            _bytesReceived++;
+                            isData = true;
+                        }
+
+                        //temp
+                        if (isData)
+                        {
+                            ReceiveBuffer.Add(b);
+                            //_prevByte = b;
+                        }
+
+                        //send cts (check function body for conditions
+                        sendCTS();
+
+                        //prevRecvByte = b;
+                    } //end read bytes loop
+                }
             } // end  while is open loop
         }
 
@@ -312,7 +319,7 @@ namespace Chetch.Utilities.Streams
             }
             else
             {
-                return _sendBuffer.Count == 0;
+                return true;
             }
         }
 
@@ -320,7 +327,7 @@ namespace Chetch.Utilities.Streams
         {
             if (requiresCTS(_bytesReceived, _uartLocalBufferSize) && isReadyToReceive())
             {
-                //Console.WriteLine("----> CTS ... sent/received {0}/{1}", _bytesSent, _bytesReceived);
+                Console.WriteLine("----> CTS ... sent/received {0}/{1}", _bytesSent, _bytesReceived);
                 _bytesReceived = 0;
                 sendByte(CTS_BYTE);
                 return true;
