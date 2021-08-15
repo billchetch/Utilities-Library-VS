@@ -55,8 +55,6 @@ namespace Chetch.Utilities.Streams
             RESET = 1,
             DEBUG_ON = 2,
             DEBUG_OFF = 3,
-            TIMEOUT_ALERT_ONLY = 4,
-            TIMEOUT_ALERT_AND_SET_CTS = 5,
             REQUEST_STATUS = 100, //100 and above are general but require user definition (by convention above 200 is completely user-specific)
         };
 
