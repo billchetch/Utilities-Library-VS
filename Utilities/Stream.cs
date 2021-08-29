@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Net;
+using System.Net.Sockets;
 
 namespace Chetch.Utilities.Streams
 {
@@ -19,6 +21,101 @@ namespace Chetch.Utilities.Streams
 
         int Read(byte[] buffer, int offset, int count);
         void Write(byte[] buffer, int offset, int count);
+    }
+
+    public class SerialPortX : SerialPorts.SerialPort, IStream
+    {
+        public SerialPortX(String port, int baud) : base(port, baud)
+        {
+
+            ReadTimeout = 100;
+        }
+
+        new public int Read(byte[] buffer, int offset, int count)
+        {
+            try
+            {
+                return base.Read(buffer, offset, count);
+            }
+            catch (TimeoutException e)
+            {
+                return -1;
+            }
+        }
+    }
+
+    public class TCPClientStream : TcpClient, IStream
+    {
+        private bool _open = false;
+
+        public bool IsOpen => _open && Connected;
+
+        public IPEndPoint RemoteEndPoint { get; set; } = null;
+
+        public TCPClientStream(IPEndPoint remoteEndPoint)
+        {
+            RemoteEndPoint = remoteEndPoint;
+        }
+
+        virtual protected IPEndPoint GetEndPoint()
+        {
+            return RemoteEndPoint;
+        }
+
+        new public void Close()
+        {
+            var stream = GetStream();
+            stream.Close();
+            base.Close();
+            _open = false;
+        }
+
+
+
+        public void Open()
+        {
+            if (IsOpen) return;
+
+
+            Connect(GetEndPoint());
+
+            NoDelay = true;
+            var stream = GetStream();
+            stream.ReadTimeout = 100;
+            stream.WriteTimeout = 100;
+
+
+            Thread.Sleep(200);
+
+            _open = true;
+        }
+
+        public int Read(byte[] buffer, int offset, int count)
+        {
+            try
+            {
+                var stream = GetStream();
+                return stream.Read(buffer, offset, count);
+            }
+            catch (System.IO.IOException e)
+            {
+                if (e.InnerException != null && e.InnerException is SocketException)
+                {
+                    var se = (SocketException)e.InnerException;
+                    if (se.SocketErrorCode == SocketError.TimedOut)
+                    {
+                        return -1;
+                    }
+                }
+                throw e;
+            }
+        }
+
+        public void Write(byte[] buffer, int offset, int count)
+        {
+            var stream = GetStream();
+            stream.Write(buffer, offset, count);
+        }
     }
 
     public class StreamFlowController
@@ -167,7 +264,7 @@ namespace Chetch.Utilities.Streams
         public void Open()
         {
             if (Stream == null) throw new InvalidOperationException("Stream object is null");
-            if (IsOpen) throw new InvalidOperationException("Stream is already open"); ;
+            if (IsOpen) throw new InvalidOperationException("Stream is already open");
 
             _remoteReset = false;
             _localReset = false;
