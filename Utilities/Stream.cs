@@ -37,7 +37,7 @@ namespace Chetch.Utilities.Streams
             {
                 return base.Read(buffer, offset, count);
             }
-            catch (TimeoutException e)
+            catch (TimeoutException)
             {
                 return -1;
             }
@@ -71,7 +71,6 @@ namespace Chetch.Utilities.Streams
             base.Close();
             _open = false;
         }
-
 
 
         public void Open()
@@ -223,6 +222,9 @@ namespace Chetch.Utilities.Streams
         private Object _sendBufferLock = new Object();
         private Thread _sendThread;
         private Thread _receiveThread;
+
+        private bool _opening = false;
+        private bool _closing = false;
         
         //public int TotalBytesSent { get; set; } = 0;
         //public int TotalBytesReceived { get; set; } = 0;
@@ -240,6 +242,9 @@ namespace Chetch.Utilities.Streams
 
         public bool IsOpen => Stream != null && Stream.IsOpen;
         public bool IsReady => IsOpen && _localReset && _remoteReset;
+
+        public bool IsOpening => _opening;
+        public bool IsClosing => _closing;
 
         public int BytesSent => _bytesSent;
         public int BytesReceived => _bytesReceived;
@@ -267,7 +272,10 @@ namespace Chetch.Utilities.Streams
         {
             if (Stream == null) throw new InvalidOperationException("Stream object is null");
             if (IsOpen) throw new InvalidOperationException("Stream is already open");
+            if (IsOpening) throw new InvalidOperationException("Stream is in the process of opening");
+            if (IsClosing) throw new InvalidOperationException("Stream is in the process of closing");
 
+            _opening = true;
             _remoteReset = false;
             _localReset = false;
 
@@ -298,10 +306,16 @@ namespace Chetch.Utilities.Streams
             _receiveThread.Start();
 
             Reset(true);
+
+            _opening = false;
         }
 
         public void Close()
         {
+            if (IsOpening) throw new InvalidOperationException("Stream is in the process of opening");
+            if (IsClosing) throw new InvalidOperationException("Stream is in the process of closing");
+
+            _closing = true;
             Stream.Close();
             if (_sendThread != null)
             {
@@ -320,6 +334,8 @@ namespace Chetch.Utilities.Streams
             _remoteReset = false;
             _localReset = false;
             Reset(false);
+
+            _closing = false;
         }
 
         public void Reset(bool sendCommandByte = false)
@@ -537,11 +553,14 @@ namespace Chetch.Utilities.Streams
             } 
             catch (Exception e)
             {
-                Task.Run(() =>
+                if (!IsClosing)
                 {
-                    if(IsOpen)Close();
-                    OnStreamError(e);
-                });
+                    Task.Run(() =>
+                    {
+                        if (IsOpen) Close();
+                        OnStreamError(e);
+                    });
+                }
             }
             Console.WriteLine("Receive thread ended");
         }
@@ -564,10 +583,14 @@ namespace Chetch.Utilities.Streams
             }
             catch (Exception e)
             {
-                Task.Run(() =>
+                if (!IsClosing)
                 {
-                    OnStreamError(e);
-                });
+                    Task.Run(() =>
+                    {
+                        if (IsOpen) Close();
+                        OnStreamError(e);
+                    });
+                }
             }
 
             Console.WriteLine("Send thread ended");
