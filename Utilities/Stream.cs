@@ -50,6 +50,8 @@ namespace Chetch.Utilities.Streams
 
         public bool IsOpen => _open && Connected;
 
+        
+
         public IPEndPoint RemoteEndPoint { get; set; } = null;
 
         public TCPClientStream(IPEndPoint remoteEndPoint)
