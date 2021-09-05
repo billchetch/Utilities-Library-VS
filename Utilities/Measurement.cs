@@ -136,5 +136,11 @@ namespace Chetch.Utilities
         {
             return GetFinalBearing(startPos.Latitude, startPos.Longitude, endPos.Latitude, endPos.Longitude, coordsInDegrees);
         }
+
+        //Time functions
+        static public bool HasTimedOut(DateTime started, long timeout, long ticksPerInterval = TimeSpan.TicksPerMillisecond)
+        {
+            return ((DateTime.Now.Ticks - started.Ticks) / ticksPerInterval) >= timeout;
+        }
     }
 }
