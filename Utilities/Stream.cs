@@ -158,6 +158,16 @@ namespace Chetch.Utilities.Streams
             }
         }
 
+        public class DataBlockArgs : EventArgs
+        {
+            public List<byte> DataBlock { get; internal set; } = new List<byte>();
+
+            public DataBlockArgs(List<byte> dataBlock)
+            {
+                DataBlock.AddRange(dataBlock);
+            }
+        }
+
         public const byte COMMAND_BYTE = 0x63;
         public const byte CTS_BYTE = 0x74;
         public const byte SLASH_BYTE = 0x5c;
@@ -215,6 +225,7 @@ namespace Chetch.Utilities.Streams
 
 
         private Object _writeLock = new Object();
+        private Object _sendLock = new Object();
         public List<byte> ReceiveBuffer { get; internal set; } = new List<byte>();
 
 
@@ -232,7 +243,7 @@ namespace Chetch.Utilities.Streams
         //List<byte> _receiveHistory = new List<byte>();
 
         public event EventHandler<StreamErrorArgs> StreamError;
-        public event EventHandler DataBlockReceived;
+        public event EventHandler<DataBlockArgs> DataBlockReceived;
         public event EventHandler<CommandByteArgs> CommandByteReceived;
         public event EventHandler<EventByteArgs> EventByteReceived;
         public event EventHandler<EventByteArgs> EventByteSent;
@@ -248,16 +259,6 @@ namespace Chetch.Utilities.Streams
 
         public int BytesSent => _bytesSent;
         public int BytesReceived => _bytesReceived;
-
-        /*public SerialPortX(String port, int baud, int localBufferSize, int remoteBufferSize) : base(port, baud)
-        {
-            _uartLocalBufferSize = localBufferSize;
-            _uartRemoteBufferSize = remoteBufferSize;
-            ErrorReceived += HandleErrorReceived;
-        }
-
-        public SerialPortX(String port, int baud, int bufferSize) : this(port, baud, bufferSize, bufferSize)
-        {}*/
 
         public StreamFlowController(IStream stream, int localBufferSize, int remoteBufferSize)
         {
@@ -485,7 +486,13 @@ namespace Chetch.Utilities.Streams
                                     case END_BYTE:
                                         if (DataBlockReceived != null)
                                         {
-                                            DataBlockReceived(this, null);
+                                            //we runs this as a task in case the handler sends messages but is blocked cos
+                                            //this thread hasn't processed a CTS_BYTE
+                                            var args = new DataBlockArgs(ReceiveBuffer);
+                                            Task.Run(() =>
+                                            {
+                                                DataBlockReceived(this, args);
+                                            });
                                         }
                                         ReceiveBuffer.Clear();
                                         break;
@@ -727,81 +734,88 @@ namespace Chetch.Utilities.Streams
             bytes2send.Add(END_BYTE);
 
             //Console.WriteLine("--> Starting message of length {0} (bytes so far sent {1})", bytes2send.Length, _bytesSent);
-            DateTime t;
-            bool waiting = false;
-
-            int i = 0;
-            bool slashed = false;
-            while (i < bytes2send.Count)
+            //We use a lock here to ensure that the entire byte list is sent without the risk of competing threads interuppting
+            lock (_sendLock) 
             {
-                t = DateTime.Now;
-                while (!_cts)
-                {
-                    if (!IsReady)
-                    {
-                        OnStreamError(new Exception("Stream is not read"));
-                        return;
-                    }
-                    waiting = true;
-                    double ms = (double)(DateTime.Now.Ticks - t.Ticks) / (double)TimeSpan.TicksPerMillisecond;
-                    if (ms >= 12) //this is to reduce hammering the CPU with a while loop
-                    {
-                        //Console.WriteLine("Consuming too many cycles so sleeping...");
-                        Thread.Sleep(1);
-                    }
 
-                    if(CTSTimeout > 0 && !_localRequestedCTS) //we can only request once
-                    {
-                        ms = (double)(DateTime.Now.Ticks - _lastCTSrequired.Ticks) / (double)TimeSpan.TicksPerMillisecond;
-                        if(ms > CTSTimeout && !_cts)
-                        {
-                            SendEvent(Event.CTS_TIMEOUT);
-                            _localRequestedCTS = true;
-                        }
-                    }
-                }
-                if (waiting)
+                DateTime t;
+                bool waiting = false;
+                int i = 0;
+                bool slashed = false;
+                while (i < bytes2send.Count)
                 {
-                    //Console.WriteLine("--> CTS arrived  i = {0}, bytesSent = {1}...", i, _bytesSent);
-                    waiting = false;
-                }
-                
-                lock (_writeLock)
-                {
-                    do
+                    //1. Wait for Clear to Send
+
+                    t = DateTime.Now;
+                    while (!_cts)
                     {
-                        byte b = bytes2send[i];
-                        if (slashed)
-                        {
-                            i++;
-                            slashed = false;
-                        }
-                        else if (b == SLASH_BYTE)
-                        {
-                            if (requiresCTS(_bytesSent + 1, _uartRemoteBufferSize))
-                            {
-                                b = PAD_BYTE;
-                            }
-                            else
-                            {
-                                slashed = true;
-                                i++;
-                            }
-                        }
-                        else
-                        {
-                            i++;
-                        }
-                        //Console.WriteLine("--> Sending: {0}", b);
                         if (!IsReady)
                         {
                             OnStreamError(new Exception("Stream is not ready"));
                             return;
                         }
-                        WriteByte(b);
-                    } while (_cts && i < bytes2send.Count); //loop a block
-                } //end write lock
-            } //end loop throught byte blocks
+                        waiting = true;
+                        double ms = (double)(DateTime.Now.Ticks - t.Ticks) / (double)TimeSpan.TicksPerMillisecond;
+                        if (ms >= 12) //this is to reduce hammering the CPU with a while loop
+                        {
+                            //Console.WriteLine("Consuming too many cycles so sleeping...");
+                            Thread.Sleep(1);
+                        }
+
+                        if (CTSTimeout > 0 && !_localRequestedCTS) //we can only request once
+                        {
+                            ms = (double)(DateTime.Now.Ticks - _lastCTSrequired.Ticks) / (double)TimeSpan.TicksPerMillisecond;
+                            if (ms > CTSTimeout && !_cts)
+                            {
+                                SendEvent(Event.CTS_TIMEOUT);
+                                _localRequestedCTS = true;
+                            }
+                        }
+                    }
+                    if (waiting)
+                    {
+                        //Console.WriteLine("--> CTS arrived  i = {0}, bytesSent = {1}...", i, _bytesSent);
+                        waiting = false;
+                    }
+
+                    //2. Write the byte to the underlying buffer
+                    lock (_writeLock)
+                    {
+                        do
+                        {
+                            byte b = bytes2send[i];
+                            if (slashed)
+                            {
+                                i++;
+                                slashed = false;
+                            }
+                            else if (b == SLASH_BYTE)
+                            {
+                                if (requiresCTS(_bytesSent + 1, _uartRemoteBufferSize))
+                                {
+                                    b = PAD_BYTE;
+                                }
+                                else
+                                {
+                                    slashed = true;
+                                    i++;
+                                }
+                            }
+                            else
+                            {
+                                i++;
+                            }
+                            //Console.WriteLine("--> Sending: {0}", b);
+                            if (!IsReady)
+                            {
+                                OnStreamError(new Exception("Stream is not ready"));
+                                return;
+                            }
+                            WriteByte(b);
+                        } while (_cts && i < bytes2send.Count); //loop a block
+                    } //end write lock
+                } //end loop throught byte blocks
+            } //end send lock
             //Console.WriteLine("--> Sent message of length {0} (using {1} slashes), i = {2}, bytesSent={3} ", bytes2send.Count, slashCount, i, _bytesSent);
         }
     }
