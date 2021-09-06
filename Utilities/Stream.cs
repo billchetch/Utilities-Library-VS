@@ -279,36 +279,39 @@ namespace Chetch.Utilities.Streams
             _opening = true;
             _remoteReset = false;
             _localReset = false;
-
-            Stream.Open();
-
-            //send thread
-            if(_sendThread != null)
+            try
             {
-                while (_sendThread.IsAlive)
-                {
-                    Thread.Sleep(100);
-                }
-            }
-            _sendThread = new Thread(Send);
-            _sendThread.Name = "SFCSend";
-            _sendThread.Start();
+                Stream.Open();
 
-            //receive thread
-            if (_receiveThread != null)
+                //send thread
+                if (_sendThread != null)
+                {
+                    while (_sendThread.IsAlive)
+                    {
+                        Thread.Sleep(100);
+                    }
+                }
+                _sendThread = new Thread(Send);
+                _sendThread.Name = "SFCSend";
+                _sendThread.Start();
+
+                //receive thread
+                if (_receiveThread != null)
+                {
+                    while (_receiveThread.IsAlive)
+                    {
+                        Thread.Sleep(100);
+                    }
+                }
+                _receiveThread = new Thread(Receive);
+                _receiveThread.Name = "SFCReceive";
+                _receiveThread.Start();
+
+                Reset(true);
+            } finally
             {
-                while (_receiveThread.IsAlive)
-                {
-                    Thread.Sleep(100);
-                }
+                _opening = false;
             }
-            _receiveThread = new Thread(Receive);
-            _receiveThread.Name = "SFCReceive";
-            _receiveThread.Start();
-
-            Reset(true);
-
-            _opening = false;
         }
 
         public void Close()
