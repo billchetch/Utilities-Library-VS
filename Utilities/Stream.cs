@@ -236,12 +236,12 @@ namespace Chetch.Utilities.Streams
 
         private bool _opening = false;
         private bool _closing = false;
-        
+
         //public int TotalBytesSent { get; set; } = 0;
         //public int TotalBytesReceived { get; set; } = 0;
         //private int _prevByte = -1;
         //List<byte> _receiveHistory = new List<byte>();
-
+        private Object _streamErrorLock = new Object();
         public event EventHandler<StreamErrorArgs> StreamError;
         public event EventHandler<DataBlockArgs> DataBlockReceived;
         public event EventHandler<CommandByteArgs> CommandByteReceived;
@@ -395,9 +395,12 @@ namespace Chetch.Utilities.Streams
         {
             if(StreamError != null)
             {
-                ErrorCode error = IsOpen ? ErrorCode.UNKNOWN_ERROR : ErrorCode.UNEXPECTED_DISCONNECT;
-                var eargs = new StreamErrorArgs(error, e);
-                StreamError(this, eargs);
+                lock (_streamErrorLock)
+                {
+                    ErrorCode error = IsOpen ? ErrorCode.UNKNOWN_ERROR : ErrorCode.UNEXPECTED_DISCONNECT;
+                    var eargs = new StreamErrorArgs(error, e);
+                    StreamError(this, eargs);
+                }
             }
         }
 
