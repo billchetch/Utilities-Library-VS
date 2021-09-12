@@ -86,6 +86,14 @@ namespace Chetch.Utilities
             }
         }
 
+        virtual public void Deserialize(Dictionary<String, Object> source)
+        {
+            foreach (var kvp in source)
+            {
+                Set(kvp.Value, kvp.Key);
+            }
+        }
+
         public List<Object> GetValues()
         {
             return _values.Values.ToList();
