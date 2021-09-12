@@ -78,6 +78,14 @@ namespace Chetch.Utilities
             }
         }
 
+        virtual public void Serialize(Dictionary<String, Object> destination)
+        {
+            foreach (var kvp in _values)
+            {
+                destination[kvp.Key] = kvp.Value;
+            }
+        }
+
         public List<Object> GetValues()
         {
             return _values.Values.ToList();
