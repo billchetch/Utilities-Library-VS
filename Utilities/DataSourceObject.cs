@@ -91,11 +91,11 @@ namespace Chetch.Utilities
             }
         }
 
-        virtual public void Deserialize(Dictionary<String, Object> source)
+        virtual public void Deserialize(Dictionary<String, Object> source, bool notify = false)
         {
             foreach (var kvp in source)
             {
-                Set(kvp.Value, kvp.Key);
+                Set(kvp.Value, kvp.Key, notify);
             }
         }
 
