@@ -65,6 +65,11 @@ namespace Chetch.Utilities
             LastModified = DateTime.Now;
         }
 
+        public void Set(Object value, bool notify, [System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value")
+        {
+            Set(value, propertyName, notify);
+        }
+
         public T Get<T>([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value")
         {
             return _values.ContainsKey(propertyName) ? (T)_values[propertyName] : default(T);
