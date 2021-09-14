@@ -7,6 +7,17 @@ using System.ComponentModel;
 
 namespace Chetch.Utilities
 {
+    public class DSOPropertyChangedEventArgs : PropertyChangedEventArgs
+    {
+        public Object NewValue { get; internal set; }
+        public Object OldValue { get; internal set; }
+
+        public DSOPropertyChangedEventArgs(String propertyName, Object newValue, Object oldValue) : base(propertyName)
+        {
+
+        }
+    }
+
     public class DataSourceObject : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -27,9 +38,9 @@ namespace Chetch.Utilities
 
         private Dictionary<String, Object> _values = new Dictionary<String, Object>();
 
-        private void NotifyPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "")
+        private void NotifyPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "", Object newValue, Object oldValue)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            PropertyChanged?.Invoke(this, new DSOPropertyChangedEventArgs(propertyName, newValue, oldValue));
         }
 
         private bool EqualValues(Object v1, Object v2)
@@ -55,11 +66,11 @@ namespace Chetch.Utilities
             {
                 if (!_raiseOnlyIfNotEqual)
                 {
-                    NotifyPropertyChanged(propertyName);
+                    NotifyPropertyChanged(propertyName, value, oldValue);
                 }
                 else if (!EqualValues(oldValue, value))
                 {
-                    NotifyPropertyChanged(propertyName);
+                    NotifyPropertyChanged(propertyName, value, oldValue);
                 }
             }
             LastModified = DateTime.Now;
