@@ -27,6 +27,18 @@ namespace Chetch.Utilities
 
         private bool _raiseOnlyIfNotEqual = true;
 
+        private Dictionary<String, Object> _values = new Dictionary<String, Object>();
+
+        public List<String> Serializable { get; internal set; } = new List<String>();
+
+
+        public List<String> DirtyFields { get; internal set; } = new List<String>();
+
+
+        public bool IsDirty => DirtyFields.Count > 0;
+
+        public List<String> Properties => _values.Keys.ToList();
+
         public DataSourceObject(bool raiseIfNotEqual)
         {
             _raiseOnlyIfNotEqual = raiseIfNotEqual;
@@ -37,8 +49,7 @@ namespace Chetch.Utilities
             //empty constructor
         }
 
-        private Dictionary<String, Object> _values = new Dictionary<String, Object>();
-
+        
         private void NotifyPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "", Object newValue = null, Object oldValue = null)
         {
             PropertyChanged?.Invoke(this, new DSOPropertyChangedEventArgs(propertyName, newValue, oldValue));
@@ -58,28 +69,38 @@ namespace Chetch.Utilities
             }
         }
 
-        public void Set(Object value, [System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value", bool notify = true)
+        public void Set(Object value, [System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value", bool notify = true, bool serializable = true)
         {
             Object oldValue = _values.ContainsKey(propertyName) ? _values[propertyName] : null;
             _values[propertyName] = value;
-
+            
             if (notify)
             {
+                bool equal = EqualValues(oldValue, value);
                 if (!_raiseOnlyIfNotEqual)
                 {
                     NotifyPropertyChanged(propertyName, value, oldValue);
                 }
-                else if (!EqualValues(oldValue, value))
+                else if (!equal)
                 {
                     NotifyPropertyChanged(propertyName, value, oldValue);
                 }
+                if (!equal)
+                {
+                    if(!DirtyFields.Contains(propertyName))DirtyFields.Add(propertyName);
+                }
+            }
+
+            if(serializable && !Serializable.Contains(propertyName))
+            {
+                Serializable.Add(propertyName);
             }
             LastModified = DateTime.Now;
         }
 
-        public void Set(Object value, bool notify, [System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value")
+        public void Set(Object value, bool notify, bool serializable = true, [System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value")
         {
-            Set(value, propertyName, notify);
+            Set(value, propertyName, notify, serializable);
         }
 
         public T Get<T>([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value")
@@ -97,9 +118,9 @@ namespace Chetch.Utilities
 
         virtual public void Serialize(Dictionary<String, Object> destination)
         {
-            foreach (var kvp in _values)
+            foreach (var key in Serializable)
             {
-                destination[kvp.Key] = kvp.Value;
+                destination[key] = _values[key];
             }
         }
 
@@ -107,8 +128,13 @@ namespace Chetch.Utilities
         {
             foreach (var kvp in source)
             {
-                Set(kvp.Value, kvp.Key, notify);
+                Set(kvp.Value, kvp.Key, notify, true);
             }
+        }
+
+        public void Clean()
+        {
+            DirtyFields.Clear();
         }
 
         public List<Object> GetValues()
