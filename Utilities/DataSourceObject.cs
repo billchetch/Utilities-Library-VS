@@ -14,7 +14,8 @@ namespace Chetch.Utilities
 
         public DSOPropertyChangedEventArgs(String propertyName, Object newValue, Object oldValue) : base(propertyName)
         {
-
+            NewValue = newValue;
+            OldValue = oldValue;
         }
     }
 
