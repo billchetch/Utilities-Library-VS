@@ -38,7 +38,7 @@ namespace Chetch.Utilities
 
         private Dictionary<String, Object> _values = new Dictionary<String, Object>();
 
-        private void NotifyPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "", Object newValue, Object oldValue)
+        private void NotifyPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "", Object newValue = null, Object oldValue = null)
         {
             PropertyChanged?.Invoke(this, new DSOPropertyChangedEventArgs(propertyName, newValue, oldValue));
         }
