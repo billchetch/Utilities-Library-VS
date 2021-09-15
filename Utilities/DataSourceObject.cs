@@ -31,11 +31,12 @@ namespace Chetch.Utilities
 
         public List<String> Serializable { get; internal set; } = new List<String>();
 
+        public List<String> NonSerializable => Properties.Except(Serializable).ToList();
 
-        public List<String> DirtyFields { get; internal set; } = new List<String>();
+        public List<String> ChangedProperties { get; internal set; } = new List<String>();
 
 
-        public bool IsDirty => DirtyFields.Count > 0;
+        public bool HasChanged => ChangedProperties.Count > 0;
 
         public List<String> Properties => _values.Keys.ToList();
 
@@ -87,7 +88,7 @@ namespace Chetch.Utilities
                 }
                 if (!equal)
                 {
-                    if(!DirtyFields.Contains(propertyName))DirtyFields.Add(propertyName);
+                    if(!ChangedProperties.Contains(propertyName)) ChangedProperties.Add(propertyName);
                 }
             }
 
@@ -132,9 +133,9 @@ namespace Chetch.Utilities
             }
         }
 
-        public void Clean()
+        public void ClearChanged()
         {
-            DirtyFields.Clear();
+            ChangedProperties.Clear();
         }
 
         public List<Object> GetValues()
