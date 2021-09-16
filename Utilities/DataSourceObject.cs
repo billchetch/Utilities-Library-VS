@@ -74,10 +74,10 @@ namespace Chetch.Utilities
         {
             Object oldValue = _values.ContainsKey(propertyName) ? _values[propertyName] : null;
             _values[propertyName] = value;
-            
+
+            bool equal = EqualValues(oldValue, value);
             if (notify)
             {
-                bool equal = EqualValues(oldValue, value);
                 if (!_raiseOnlyIfNotEqual)
                 {
                     NotifyPropertyChanged(propertyName, value, oldValue);
@@ -86,13 +86,13 @@ namespace Chetch.Utilities
                 {
                     NotifyPropertyChanged(propertyName, value, oldValue);
                 }
-                if (!equal)
-                {
-                    if(!ChangedProperties.Contains(propertyName)) ChangedProperties.Add(propertyName);
-                }
+            }
+            if (!equal)
+            {
+                if (!ChangedProperties.Contains(propertyName)) ChangedProperties.Add(propertyName);
             }
 
-            if(serializable && !Serializable.Contains(propertyName))
+            if (serializable && !Serializable.Contains(propertyName))
             {
                 Serializable.Add(propertyName);
             }
