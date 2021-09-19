@@ -30,7 +30,8 @@ namespace Chetch.Utilities
             public const int SERIALIZABLE = 2;
             public const int DATA = 4;
             public const int HIDDEN = 8;
-            public const int NON_HIDDEN = EVENT | SERIALIZABLE | DATA;
+            public const int IDENTIFIER = 16;
+            public const int NON_HIDDEN = EVENT | SERIALIZABLE | DATA | IDENTIFIER;
 
             private int _attributes = NONE;
 
@@ -217,6 +218,8 @@ namespace Chetch.Utilities
             var properties = GetType().GetProperties();
             foreach (var prop in properties)
             {
+                if (!prop.PropertyType.IsPublic) continue;
+
                 if (withAttributes == -1)
                 {
                     propertyNames.Add(prop.Name);
