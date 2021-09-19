@@ -29,6 +29,8 @@ namespace Chetch.Utilities
             public const int EVENT = 1;
             public const int SERIALIZABLE = 2;
             public const int DATA = 4;
+            public const int HIDDEN = 8;
+            public const int NON_HIDDEN = EVENT | SERIALIZABLE | DATA;
 
             private int _attributes = NONE;
 
@@ -36,6 +38,9 @@ namespace Chetch.Utilities
             public bool IsSerializable => HasAttribute(SERIALIZABLE);
 
             public bool IsData => HasAttribute(DATA);
+
+            public bool IsHidden => HasAttribute(HIDDEN);
+
 
             Object _defaultValue;
             public Object DefaultValue => _defaultValue;
@@ -68,8 +73,6 @@ namespace Chetch.Utilities
         private bool _raiseOnlyIfNotEqual = true;
 
         private Dictionary<String, Object> _values = new Dictionary<String, Object>();
-
-        public List<String> Properties => _values.Keys.ToList();
 
         public List<String> ChangedProperties { get; internal set; } = new List<String>();
 
@@ -207,14 +210,30 @@ namespace Chetch.Utilities
             return _values.Values.ToList();
         }
 
-        public List<String> GetPropertyNames()
+        public List<String> GetPropertyNames(int withAttributes = PropertyAttribute.NON_HIDDEN)
         {
-            return _values.Keys.ToList();
-        }
+            List<String> propertyNames = new List<String>();
 
-        public bool HasProperty(String propertyName)
-        {
-            return _values.ContainsKey(propertyName);
+            var properties = GetType().GetProperties();
+            foreach (var prop in properties)
+            {
+                if (withAttributes == -1)
+                {
+                    propertyNames.Add(prop.Name);
+                }
+                else
+                {
+                    var atts = prop.GetCustomAttributes(typeof(PropertyAttribute), true);
+                    if (atts.Length == 0) continue;
+                    var pa = (PropertyAttribute)atts[0];
+                    if (pa.HasAttribute(withAttributes))
+                    {
+                        propertyNames.Add(prop.Name);
+                    }
+                }
+            }
+
+            return propertyNames;
         }
 
         public PropertyAttribute GetPropertyAttribute(String propertyName)
@@ -252,5 +271,6 @@ namespace Chetch.Utilities
         {
             return PropertyHasAttribute(propertyName, PropertyAttribute.SERIALIZABLE);
         }
+
     }
 }
