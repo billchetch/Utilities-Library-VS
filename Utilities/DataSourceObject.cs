@@ -71,10 +71,7 @@ namespace Chetch.Utilities
 
         public List<String> ChangedProperties { get; internal set; } = new List<String>();
 
-
         public bool HasChanged => ChangedProperties.Count > 0;
-
-        public List<String> Properties => _values.Keys.ToList();
 
         public DataSourceObject(bool raiseIfNotEqual)
         {
