@@ -26,23 +26,22 @@ namespace Chetch.Utilities
         public class PropertyAttribute : Attribute
         {
             public const int NONE = 0;
-            public const int EVENT = 1;
-            public const int SERIALIZABLE = 2;
-            public const int DATA = 4;
-            public const int HIDDEN = 8;
-            public const int IDENTIFIER = 16;
-            public const int NON_HIDDEN = EVENT | SERIALIZABLE | DATA | IDENTIFIER;
+            public const int SERIALIZABLE = 1;
+            public const int HIDDEN = 2;
+            public const int IDENTIFIER = 4;
+            public const int DESCRIPTOR = 4;
+
 
             private int _attributes = NONE;
 
-            public bool IsEvent => HasAttribute(EVENT);
             public bool IsSerializable => HasAttribute(SERIALIZABLE);
 
-            public bool IsData => HasAttribute(DATA);
-
+            
             public bool IsHidden => HasAttribute(HIDDEN);
 
             public bool IsIdentifier => HasAttribute(IDENTIFIER);
+
+            public bool IsDescriptor => HasAttribute(DESCRIPTOR);
 
 
             Object _defaultValue;
@@ -159,22 +158,24 @@ namespace Chetch.Utilities
 
         public T Get<T>([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value")
         {
-            return _values.ContainsKey(propertyName) ? (T)_values[propertyName] : default(T);
-        }
-
-        public bool HasValue(String propertyName)
-        {
-            return _values.ContainsKey(propertyName);
-        }
-
-        virtual public void Copy(DataSourceObject dso, bool notify = true)
-        {
-            foreach (var kvp in _values)
+            if (_values.ContainsKey(propertyName))
             {
-                dso.Set(kvp.Value, kvp.Key, notify);
+                return (T)_values[propertyName];
+            }
+            else
+            {
+                Type type = GetType();
+                var properties = type.GetProperties();
+                foreach (var prop in properties)
+                {
+                    if (prop.Name == propertyName) return (T)prop.GetValue(this);
+                }
+
+                throw new ArgumentException(String.Format("{0} does not have property {1}", type.ToString(), propertyName));
             }
         }
 
+        
         virtual public void Serialize(Dictionary<String, Object> destination)
         {
             Type type = GetType();
@@ -196,7 +197,7 @@ namespace Chetch.Utilities
         {
             foreach (var kvp in source)
             {
-                if (PropertyIsSerializable(kvp.Key))
+                if (PropertyHasAttribute(kvp.Key, PropertyAttribute.SERIALIZABLE))
                 {
                     Set(kvp.Value, kvp.Key, notify);
                 }
@@ -208,12 +209,7 @@ namespace Chetch.Utilities
             ChangedProperties.Clear();
         }
 
-        public List<Object> GetValues()
-        {
-            return _values.Values.ToList();
-        }
-
-        public List<String> GetPropertyNames(int withAttributes = PropertyAttribute.NON_HIDDEN)
+        public List<String> GetPropertyNames(int withAttributes)
         {
             List<String> propertyNames = new List<String>();
 
@@ -261,21 +257,5 @@ namespace Chetch.Utilities
             var pa = GetPropertyAttribute(propertyName);
             return pa == null ? false : pa.HasAttribute(attributes);
         }
-
-        public bool PropertyIsEvent(String propertyName)
-        {
-            return PropertyHasAttribute(propertyName, PropertyAttribute.EVENT);
-        }
-
-        public bool PropertyIsData(String propertyName)
-        {
-            return PropertyHasAttribute(propertyName, PropertyAttribute.DATA);
-        }
-
-        public bool PropertyIsSerializable(String propertyName)
-        {
-            return PropertyHasAttribute(propertyName, PropertyAttribute.SERIALIZABLE);
-        }
-
     }
 }
