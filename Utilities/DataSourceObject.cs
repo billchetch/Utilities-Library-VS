@@ -69,6 +69,8 @@ namespace Chetch.Utilities
 
         private Dictionary<String, Object> _values = new Dictionary<String, Object>();
 
+        public List<String> Properties => _values.Keys.ToList();
+
         public List<String> ChangedProperties { get; internal set; } = new List<String>();
 
         public bool HasChanged => ChangedProperties.Count > 0;
@@ -152,6 +154,11 @@ namespace Chetch.Utilities
         public T Get<T>([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value")
         {
             return _values.ContainsKey(propertyName) ? (T)_values[propertyName] : default(T);
+        }
+
+        public bool HasValue(String propertyName)
+        {
+            return _values.ContainsKey(propertyName);
         }
 
         virtual public void Copy(DataSourceObject dso, bool notify = true)
