@@ -55,9 +55,8 @@ namespace Chetch.Utilities
                 _attributes = attributtes;
             }
 
-            public PropertyAttribute(int attributtes, Object defaultValue)
+            public PropertyAttribute(int attributtes, Object defaultValue) : this(attributtes)
             {
-                _attributes = attributtes;
                 _defaultValue = defaultValue;
                 _hasDefaultValue = true;
             }
