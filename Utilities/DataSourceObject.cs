@@ -19,8 +19,48 @@ namespace Chetch.Utilities
         }
     }
 
+    
     public class DataSourceObject : INotifyPropertyChanged
     {
+        [AttributeUsage(AttributeTargets.Property)]
+        public class PropertyAttribute : Attribute
+        {
+            public const int NONE = 0;
+            public const int EVENT = 1;
+            public const int SERIALIZABLE = 2;
+            public const int DATA = 4;
+
+            private int _attributes = NONE;
+
+            public bool IsEvent => HasAttribute(EVENT);
+            public bool IsSerializable => HasAttribute(SERIALIZABLE);
+
+            public bool IsData => HasAttribute(DATA);
+
+            Object _defaultValue;
+            public Object DefaultValue => _defaultValue;
+
+            bool _hasDefaultValue = false;
+            public bool HasDefaultValue => _hasDefaultValue;
+
+            public PropertyAttribute(int attributtes)
+            {
+                _attributes = attributtes;
+            }
+
+            public PropertyAttribute(int attributtes, Object defaultValue)
+            {
+                _attributes = attributtes;
+                _defaultValue = defaultValue;
+                _hasDefaultValue = true;
+            }
+
+            public bool HasAttribute(int att)
+            {
+                return (_attributes & att) > 0;
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         public DateTime LastModified { get; set; }
@@ -28,10 +68,6 @@ namespace Chetch.Utilities
         private bool _raiseOnlyIfNotEqual = true;
 
         private Dictionary<String, Object> _values = new Dictionary<String, Object>();
-
-        public List<String> Serializable { get; internal set; } = new List<String>();
-
-        public List<String> NonSerializable => Properties.Except(Serializable).ToList();
 
         public List<String> ChangedProperties { get; internal set; } = new List<String>();
 
@@ -43,15 +79,31 @@ namespace Chetch.Utilities
         public DataSourceObject(bool raiseIfNotEqual)
         {
             _raiseOnlyIfNotEqual = raiseIfNotEqual;
+            initialise();
         }
 
         public DataSourceObject()
         {
-            //empty constructor
+            initialise();
         }
 
+        private void initialise()
+        {
+            Type type = GetType();
+            var properties = type.GetProperties();
+            foreach (var prop in properties)
+            {
+                var atts = prop.GetCustomAttributes(typeof(PropertyAttribute), true);
+                if (atts.Length == 0) continue;
+                PropertyAttribute pa = (PropertyAttribute)atts[0];
+                if (pa.HasDefaultValue)
+                {
+                    Set(pa.DefaultValue, prop.Name, false);
+                }
+            }
+        }
         
-        private void NotifyPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "", Object newValue = null, Object oldValue = null)
+        protected void NotifyPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "", Object newValue = null, Object oldValue = null)
         {
             PropertyChanged?.Invoke(this, new DSOPropertyChangedEventArgs(propertyName, newValue, oldValue));
         }
@@ -70,7 +122,7 @@ namespace Chetch.Utilities
             }
         }
 
-        public void Set(Object value, [System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value", bool notify = true, bool serializable = true)
+        public void Set(Object value, [System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value", bool notify = true)
         {
             Object oldValue = _values.ContainsKey(propertyName) ? _values[propertyName] : null;
             _values[propertyName] = value;
@@ -92,16 +144,12 @@ namespace Chetch.Utilities
                 if (!ChangedProperties.Contains(propertyName)) ChangedProperties.Add(propertyName);
             }
 
-            if (serializable && !Serializable.Contains(propertyName))
-            {
-                Serializable.Add(propertyName);
-            }
             LastModified = DateTime.Now;
         }
 
-        public void Set(Object value, bool notify, bool serializable = true, [System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value")
+        public void Set(Object value, bool notify, [System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value")
         {
-            Set(value, propertyName, notify, serializable);
+            Set(value, propertyName, notify);
         }
 
         public T Get<T>([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value")
@@ -119,9 +167,18 @@ namespace Chetch.Utilities
 
         virtual public void Serialize(Dictionary<String, Object> destination)
         {
-            foreach (var key in Serializable)
+            Type type = GetType();
+            var properties = type.GetProperties();
+            foreach (var prop in properties)
             {
-                destination[key] = _values[key];
+                var atts = prop.GetCustomAttributes(typeof(PropertyAttribute), true);
+                if (atts.Length == 0) continue;
+
+                PropertyAttribute pa = (PropertyAttribute)atts[0];
+                if (pa.IsSerializable)
+                {
+                    destination[prop.Name] = _values[prop.Name];
+                }
             }
         }
 
@@ -129,7 +186,10 @@ namespace Chetch.Utilities
         {
             foreach (var kvp in source)
             {
-                Set(kvp.Value, kvp.Key, notify, true);
+                if (PropertyIsSerializable(kvp.Key))
+                {
+                    Set(kvp.Value, kvp.Key, notify);
+                }
             }
         }
 
@@ -151,6 +211,42 @@ namespace Chetch.Utilities
         public bool HasProperty(String propertyName)
         {
             return _values.ContainsKey(propertyName);
+        }
+
+        public PropertyAttribute GetPropertyAttribute(String propertyName)
+        {
+            Type type = GetType();
+            var properties = type.GetProperties();
+            foreach (var prop in properties)
+            {
+                if (prop.Name == propertyName)
+                {
+                    var atts = prop.GetCustomAttributes(typeof(PropertyAttribute), true);
+                    return atts.Length > 0 ? (PropertyAttribute)atts[0] : null;
+                }
+            }
+            return null;
+        }
+
+        public bool PropertyHasAttribute(String propertyName, int attributes)
+        {
+            var pa = GetPropertyAttribute(propertyName);
+            return pa == null ? false : pa.HasAttribute(attributes);
+        }
+
+        public bool PropertyIsEvent(String propertyName)
+        {
+            return PropertyHasAttribute(propertyName, PropertyAttribute.EVENT);
+        }
+
+        public bool PropertyIsData(String propertyName)
+        {
+            return PropertyHasAttribute(propertyName, PropertyAttribute.DATA);
+        }
+
+        public bool PropertyIsSerializable(String propertyName)
+        {
+            return PropertyHasAttribute(propertyName, PropertyAttribute.SERIALIZABLE);
         }
     }
 }
