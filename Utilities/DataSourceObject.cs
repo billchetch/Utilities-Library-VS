@@ -42,6 +42,8 @@ namespace Chetch.Utilities
 
             public bool IsHidden => HasAttribute(HIDDEN);
 
+            public bool IsIdentifier => HasAttribute(IDENTIFIER);
+
 
             Object _defaultValue;
             public Object DefaultValue => _defaultValue;
