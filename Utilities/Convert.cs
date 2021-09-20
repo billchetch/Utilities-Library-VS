@@ -149,6 +149,24 @@ namespace Chetch.Utilities
             return new string(chars);
         }
 
+
+        public static byte[] ToBytes(Object o)
+        {
+            if(o == null)
+            {
+                throw new ArgumentNullException("Cannot covert null object ");
+            }
+            if(o is String)
+            {
+                return ToBytes((String)o);
+            } else if(o is ValueType)
+            {
+                return ToBytes((ValueType)o);
+            } else
+            {
+                throw new ArgumentException(String.Format("Cannot covert to bytes object of type: {0}", o.GetType()));
+            }
+        }
         public static byte[] ToBytes(String s)
         {
             byte[] bytes = new byte[s.Length];
