@@ -29,7 +29,8 @@ namespace Chetch.Utilities
             public const int SERIALIZABLE = 1;
             public const int HIDDEN = 2;
             public const int IDENTIFIER = 4;
-            public const int DESCRIPTOR = 4;
+            public const int DESCRIPTOR = 8;
+            public const int ERROR = 16;
 
 
             private int _attributes = NONE;
@@ -42,6 +43,8 @@ namespace Chetch.Utilities
             public bool IsIdentifier => HasAttribute(IDENTIFIER);
 
             public bool IsDescriptor => HasAttribute(DESCRIPTOR);
+
+            public bool IsError => HasAttribute(ERROR);
 
 
             Object _defaultValue;
