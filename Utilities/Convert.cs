@@ -193,7 +193,23 @@ namespace Chetch.Utilities
             int sz = System.Runtime.InteropServices.Marshal.SizeOf(n);
             if (sz <= sizeof(System.Int64))
             {
-                return ToBytes(System.Convert.ToInt64(n), littleEndian, removeZeroBytePadding, padToLength);
+                byte[] bytes = ToBytes(System.Convert.ToInt64(n), littleEndian, removeZeroBytePadding, padToLength);
+                int maxSize = System.Math.Max(sz, padToLength);
+                if (bytes.Length > maxSize)
+                {
+                    byte[] pruned = new byte[maxSize];
+                    int startIdx = littleEndian ? 0 : bytes.Length - maxSize;
+                    int endIdx = startIdx + maxSize;
+                    for (int i = startIdx; i < endIdx; i++)
+                    {
+                        pruned[i - startIdx] = bytes[i];
+                    }
+                    return pruned;
+                }
+                else
+                {
+                    return bytes;
+                }
             }
             else
             {
@@ -201,17 +217,7 @@ namespace Chetch.Utilities
             }
         }
 
-        public static byte[] ToBytes(Int64 n, bool removeZeroBytePadding = true, int padToLength = -1)
-        {
-            return ToBytes(n, BitConverter.IsLittleEndian, removeZeroBytePadding, padToLength);
-        }
-
-        public static byte[] ToBytes(Int64 n, int padToLength)
-        {
-            return ToBytes(n, BitConverter.IsLittleEndian, true, padToLength);
-        }
-
-        public static byte[] ToBytes(Int64 n, bool littleEndian, bool removeZeroBytePadding, int padToLength = -1)
+        private static byte[] ToBytes(Int64 n, bool littleEndian, bool removeZeroBytePadding, int padToLength = -1)
         {
             var bytes = BitConverter.GetBytes(n);
 
@@ -321,22 +327,30 @@ namespace Chetch.Utilities
                 return System.Convert.ChangeType(ToByte(bytes), type);
             }
 
+            if (type == typeof(bool))
+            {
+                return ToBoolean(bytes);
+            }
+
             if (type == typeof(int))
             {
-                return System.Convert.ChangeType(ToInt(bytes, littleEndian), type);
+                return ToInt(bytes, littleEndian);
             }
 
             if (type == typeof(long))
             {
-                return System.Convert.ChangeType(ToLong(bytes, littleEndian), type);
+                return ToLong(bytes, littleEndian);
             }
 
             if (type == typeof(String))
             {
-                return System.Convert.ChangeType(ToString(bytes), type);
+                return ToString(bytes);
             }
 
-
+            if (type.BaseType == typeof(System.Enum))
+            {
+                return Enum.ToObject(type, ToInt(bytes));
+            }
 
             throw new Exception(String.Format("Cannot convert type {0}", type));
         }
