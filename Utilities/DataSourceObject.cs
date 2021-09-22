@@ -239,6 +239,33 @@ namespace Chetch.Utilities
             return propertyNames;
         }
 
+        public List<System.Reflection.PropertyInfo> GetProperties(int withAttributes)
+        {
+            
+            var properties = GetType().GetProperties();
+            if (withAttributes == -1)
+            {
+                return properties.ToList();
+            }
+            else
+            {
+                List<System.Reflection.PropertyInfo> properties2return = new List<System.Reflection.PropertyInfo>();
+                foreach (var prop in properties)
+                {
+                    
+                    var atts = prop.GetCustomAttributes(typeof(PropertyAttribute), true);
+                    if (atts.Length == 0) continue;
+                    var pa = (PropertyAttribute)atts[0];
+                    if (pa.HasAttribute(withAttributes))
+                    {
+                        properties2return.Add(prop);
+                    }
+                }
+
+                return properties2return;
+            }
+        }
+
         public PropertyAttribute GetPropertyAttribute(String propertyName)
         {
             Type type = GetType();

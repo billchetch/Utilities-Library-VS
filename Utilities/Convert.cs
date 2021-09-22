@@ -291,6 +291,18 @@ namespace Chetch.Utilities
             return n;
         }
 
+
+        public static byte ToByte(byte[] bytes, bool littleEndian = true)
+        {
+            return (byte)ToInt(bytes, littleEndian);
+        }
+
+
+        public static bool ToBoolean(byte[] bytes, bool littleEndian = true)
+        {
+            return (ToInt(bytes, littleEndian) > 0);
+        }
+
         public static int ToInt(byte[] bytes, bool littleEndian = true)
         {
             return (int)ToLong(bytes, littleEndian);
@@ -300,6 +312,38 @@ namespace Chetch.Utilities
         {
             if (BitConverter.IsLittleEndian != littleEndian) Array.Reverse(bytes);
             return BitConverter.ToSingle(bytes, 0);
+        }
+
+        public static dynamic ToType(Type type, byte[] bytes, bool littleEndian = true)
+        {
+            if (type == typeof(byte))
+            {
+                return System.Convert.ChangeType(ToByte(bytes), type);
+            }
+
+            if (type == typeof(int))
+            {
+                return System.Convert.ChangeType(ToInt(bytes, littleEndian), type);
+            }
+
+            if (type == typeof(long))
+            {
+                return System.Convert.ChangeType(ToLong(bytes, littleEndian), type);
+            }
+
+            if (type == typeof(String))
+            {
+                return System.Convert.ChangeType(ToString(bytes), type);
+            }
+
+
+
+            throw new Exception(String.Format("Cannot convert type {0}", type));
+        }
+
+        public static T To<T>(byte[] bytes, bool littleEndian = true)
+        {
+            return (T)ToType(typeof(T), bytes, littleEndian);
         }
 
     } //end of class 
