@@ -95,8 +95,7 @@ namespace Chetch.Utilities
 
         private void initialise()
         {
-            Type type = GetType();
-            var properties = type.GetProperties();
+            var properties = GetProperties(-1);
             foreach (var prop in properties)
             {
                 var atts = prop.GetCustomAttributes(typeof(PropertyAttribute), true);
@@ -104,7 +103,13 @@ namespace Chetch.Utilities
                 PropertyAttribute pa = (PropertyAttribute)atts[0];
                 if (pa.HasDefaultValue)
                 {
-                    Set(pa.DefaultValue, prop.Name, false);
+                    Object val = pa.DefaultValue;
+                    if (val != null && prop.PropertyType != val.GetType())
+                    {
+                        val = System.Convert.ChangeType(val, prop.PropertyType);
+                    } 
+                    prop.SetValue(this, val);
+                    
                 }
             }
         }
@@ -180,18 +185,10 @@ namespace Chetch.Utilities
         
         virtual public void Serialize(Dictionary<String, Object> destination)
         {
-            Type type = GetType();
-            var properties = type.GetProperties();
+            var properties = GetProperties(PropertyAttribute.SERIALIZABLE);
             foreach (var prop in properties)
             {
-                var atts = prop.GetCustomAttributes(typeof(PropertyAttribute), true);
-                if (atts.Length == 0) continue;
-
-                PropertyAttribute pa = (PropertyAttribute)atts[0];
-                if (pa.IsSerializable)
-                {
-                    destination[prop.Name] = _values[prop.Name];
-                }
+                destination[prop.Name] = prop.GetValue(this);
             }
         }
 
@@ -199,9 +196,10 @@ namespace Chetch.Utilities
         {
             foreach (var kvp in source)
             {
-                if (PropertyHasAttribute(kvp.Key, PropertyAttribute.SERIALIZABLE))
+                var prop = GetProperty(kvp.Key, PropertyAttribute.SERIALIZABLE);
+                if (prop != null)
                 {
-                    Set(kvp.Value, kvp.Key, notify);
+                    prop.SetValue(this, kvp.Value);
                 }
             }
         }
@@ -209,34 +207,6 @@ namespace Chetch.Utilities
         public void ClearChanged()
         {
             ChangedProperties.Clear();
-        }
-
-        public List<String> GetPropertyNames(int withAttributes)
-        {
-            List<String> propertyNames = new List<String>();
-
-            var properties = GetType().GetProperties();
-            foreach (var prop in properties)
-            {
-                if (!prop.PropertyType.IsPublic) continue;
-
-                if (withAttributes == -1)
-                {
-                    propertyNames.Add(prop.Name);
-                }
-                else
-                {
-                    var atts = prop.GetCustomAttributes(typeof(PropertyAttribute), true);
-                    if (atts.Length == 0) continue;
-                    var pa = (PropertyAttribute)atts[0];
-                    if (pa.HasAttribute(withAttributes))
-                    {
-                        propertyNames.Add(prop.Name);
-                    }
-                }
-            }
-
-            return propertyNames;
         }
 
         public List<System.Reflection.PropertyInfo> GetProperties(int withAttributes)
@@ -266,17 +236,23 @@ namespace Chetch.Utilities
             }
         }
 
+        public System.Reflection.PropertyInfo GetProperty(String propertyName, int withAttributes)
+        {
+            var properties = GetProperties(withAttributes);
+            foreach(var prop in properties)
+            {
+                if (prop.Name == propertyName) return prop;
+            }
+            return null;
+        }
+
         public PropertyAttribute GetPropertyAttribute(String propertyName)
         {
-            Type type = GetType();
-            var properties = type.GetProperties();
-            foreach (var prop in properties)
+            var prop = GetProperty(propertyName, -1);
+            if (prop != null)
             {
-                if (prop.Name == propertyName)
-                {
-                    var atts = prop.GetCustomAttributes(typeof(PropertyAttribute), true);
-                    return atts.Length > 0 ? (PropertyAttribute)atts[0] : null;
-                }
+                var atts = prop.GetCustomAttributes(typeof(PropertyAttribute), true);
+                return atts.Length > 0 ? (PropertyAttribute)atts[0] : null;
             }
             return null;
         }
