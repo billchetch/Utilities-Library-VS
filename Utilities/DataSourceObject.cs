@@ -133,7 +133,7 @@ namespace Chetch.Utilities
             }
         }
 
-        public void Set(Object value, [System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value", bool notify = true)
+        public void Set(Object value, [System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value", bool notify = true, bool forceNotify = false)
         {
             Object oldValue = _values.ContainsKey(propertyName) ? _values[propertyName] : null;
             _values[propertyName] = value;
@@ -141,7 +141,7 @@ namespace Chetch.Utilities
             bool equal = EqualValues(oldValue, value);
             if (notify)
             {
-                if (!_raiseOnlyIfNotEqual)
+                if (!_raiseOnlyIfNotEqual || forceNotify)
                 {
                     NotifyPropertyChanged(propertyName, value, oldValue);
                 }
@@ -158,9 +158,9 @@ namespace Chetch.Utilities
             LastModified = DateTime.Now;
         }
 
-        public void Set(Object value, bool notify, [System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value")
+        public void Set(Object value, bool notify, bool forceNotify = false, [System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value")
         {
-            Set(value, propertyName, notify);
+            Set(value, propertyName, notify, forceNotify);
         }
 
         public T Get<T>([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "value")
