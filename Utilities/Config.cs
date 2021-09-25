@@ -65,13 +65,26 @@ namespace Chetch.Utilities.Config
             return GetSourceListenerAttributes(t.Name, attributeKey);
         }
 
-        static public bool VerifyEventLogSources(String logName, bool createIfRequired = true)
+        static public bool VerifyEventLogSources(String logName, bool createIfRequired = true, bool restrictToLocalMachine = true)
         {
             var sourceNames = GetSourceListenerAttributes(typeof(EventLog), "initializeData");
             bool requiresRestart = false;
             foreach (var source in sourceNames)
             {
-                if (!EventLog.SourceExists(source))
+                bool sourceExists = restrictToLocalMachine ? EventLog.SourceExists(source, ".") : EventLog.SourceExists(source);
+                if (sourceExists && restrictToLocalMachine)
+                {
+                    String sourceLogName = EventLog.LogNameFromSourceName(source, ".");
+                    if (String.IsNullOrEmpty(sourceLogName))
+                    {
+                        EventLog.DeleteEventSource(source);
+                        sourceExists = false;
+                    } else if(sourceLogName != logName)
+                    {
+                        throw new Exception(String.Format("Source {0} already belongs to event log {1}", source, sourceLogName));
+                    }
+                }
+                if (!sourceExists)
                 {
                     if (!createIfRequired)
                     {

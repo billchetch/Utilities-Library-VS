@@ -515,7 +515,7 @@ namespace Chetch.Utilities.Streams
                                     case CTS_BYTE:
                                         if (!_cts) //we check that _cts is indeed false so tha we don't reset _bytesSent unnecessarily
                                         {
-                                            Console.WriteLine("<--- CTS (bytes sent/received {0}/{1})", _bytesSent, _bytesReceived);
+                                            //Console.WriteLine("<--- CTS (bytes sent/received {0}/{1})", _bytesSent, _bytesReceived);
                                             lock (_writeLock)
                                             {
                                                 _bytesSent = 0; //Note: important tha we set _bytesSent BEFORE _cts so that the send loop starts again with _bytesSent already reset
@@ -575,7 +575,7 @@ namespace Chetch.Utilities.Streams
                     });
                 }
             }
-            Console.WriteLine("Receive thread ended");
+            //Console.WriteLine("Receive thread ended");
         }
 
         protected void Send()
@@ -606,7 +606,7 @@ namespace Chetch.Utilities.Streams
                 }
             }
 
-            Console.WriteLine("Send thread ended");
+            //Console.WriteLine("Send thread ended");
         }
 
         protected int Read(byte[] buffer, int offset, int count)
