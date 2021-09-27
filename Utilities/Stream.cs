@@ -23,6 +23,7 @@ namespace Chetch.Utilities.Streams
         void Write(byte[] buffer, int offset, int count);
     }
 
+    [System.ComponentModel.DesignerCategory("Code")]
     public class SerialPortX : SerialPorts.SerialPort, IStream
     {
         public SerialPortX(String port, int baud) : base(port, baud)
@@ -64,6 +65,11 @@ namespace Chetch.Utilities.Streams
             return RemoteEndPoint;
         }
 
+        virtual protected void ConnectToEndPoint()
+        {
+            Connect(GetEndPoint());
+        }
+
         new public void Close()
         {
             var stream = GetStream();
@@ -72,13 +78,12 @@ namespace Chetch.Utilities.Streams
             _open = false;
         }
 
-
         public void Open()
         {
             if (IsOpen) return;
 
 
-            Connect(GetEndPoint());
+            ConnectToEndPoint();
 
             NoDelay = true;
             var stream = GetStream();
@@ -825,4 +830,5 @@ namespace Chetch.Utilities.Streams
             //Console.WriteLine("--> Sent message of length {0} (using {1} slashes), i = {2}, bytesSent={3} ", bytes2send.Count, slashCount, i, _bytesSent);
         }
     }
+    
 }
