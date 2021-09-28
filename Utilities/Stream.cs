@@ -30,6 +30,7 @@ namespace Chetch.Utilities.Streams
         {
 
             ReadTimeout = 100;
+            WriteTimeout = 100;
         }
 
         new public int Read(byte[] buffer, int offset, int count)
