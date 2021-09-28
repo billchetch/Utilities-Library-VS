@@ -107,9 +107,11 @@ namespace Chetch.Utilities
                     if (val != null && prop.PropertyType != val.GetType())
                     {
                         val = System.Convert.ChangeType(val, prop.PropertyType);
-                    } 
-                    prop.SetValue(this, val);
-                    
+                    }
+                    //The sole reason for a Default Value property attribute is when we are using the 'Set/Get' methods
+                    //for the property and so therefore cannot use compile time assignment.  Hence we use the Set method
+                    //and ensure that notify = false.
+                    Set(val, prop.Name, false);
                 }
             }
         }
