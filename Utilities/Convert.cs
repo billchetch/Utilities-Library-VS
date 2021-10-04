@@ -320,6 +320,12 @@ namespace Chetch.Utilities
             return BitConverter.ToSingle(bytes, 0);
         }
 
+        public static double ToDouble(byte[] bytes, bool littleEndian = true)
+        {
+            if (BitConverter.IsLittleEndian != littleEndian) Array.Reverse(bytes);
+            return BitConverter.ToDouble(bytes, 0);
+        }
+
         public static dynamic ToType(Type type, byte[] bytes, bool littleEndian = true)
         {
             if (type == typeof(byte))
@@ -340,6 +346,16 @@ namespace Chetch.Utilities
             if (type == typeof(long))
             {
                 return ToLong(bytes, littleEndian);
+            }
+
+            if (type == typeof(double))
+            {
+                return ToDouble(bytes, littleEndian);
+            }
+
+            if (type == typeof(float) || type == typeof(Single))
+            {
+                return ToFloat(bytes, littleEndian);
             }
 
             if (type == typeof(String))
