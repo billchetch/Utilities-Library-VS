@@ -233,12 +233,17 @@ namespace Chetch.Utilities.Streams
         private Object _writeLock = new Object();
         private Object _sendLock = new Object();
         public List<byte> ReceiveBuffer { get; internal set; } = new List<byte>();
-
+        private Queue<DataBlockArgs> _dataBlocks = new Queue<DataBlockArgs>();
+        private Object _dataBlocksLock = new Object();
 
         private List<byte> _sendBuffer = new List<byte>();
         private Object _sendBufferLock = new Object();
+
+
+        
         private Thread _sendThread;
         private Thread _receiveThread;
+        private Thread _processThread;
 
         private bool _opening = false;
         private bool _closing = false;
@@ -313,6 +318,18 @@ namespace Chetch.Utilities.Streams
                 _receiveThread.Name = "SFCReceive";
                 _receiveThread.Start();
 
+                //process thread
+                if (_processThread != null)
+                {
+                    while (_processThread.IsAlive)
+                    {
+                        Thread.Sleep(100);
+                    }
+                }
+                _processThread = new Thread(Process);
+                _processThread.Name = "SFCProcess";
+                _processThread.Start();
+
                 Reset(true);
             } finally
             {
@@ -341,6 +358,13 @@ namespace Chetch.Utilities.Streams
                     Thread.Sleep(100);
                 }
             }
+            if (_processThread != null)
+            {
+                while (_processThread.IsAlive)
+                {
+                    Thread.Sleep(100);
+                }
+            }
             _remoteReset = false;
             _localReset = false;
             Reset(false);
@@ -355,6 +379,8 @@ namespace Chetch.Utilities.Streams
                 _sendBuffer.Clear();
             }
             ReceiveBuffer.Clear();
+            _dataBlocks.Clear();
+
             if (sendCommandByte)
             {
                 _remoteReset = false;
@@ -496,15 +522,9 @@ namespace Chetch.Utilities.Streams
                                         break;
 
                                     case END_BYTE:
-                                        if (DataBlockReceived != null)
+                                        lock (_dataBlocksLock)
                                         {
-                                            //we runs this as a task in case the handler sends messages but is blocked cos
-                                            //this thread hasn't processed a CTS_BYTE
-                                            var args = new DataBlockArgs(ReceiveBuffer);
-                                            Task.Run(() =>
-                                            {
-                                                DataBlockReceived(this, args);
-                                            });
+                                            _dataBlocks.Enqueue(new DataBlockArgs(ReceiveBuffer));
                                         }
                                         ReceiveBuffer.Clear();
                                         break;
@@ -582,6 +602,45 @@ namespace Chetch.Utilities.Streams
                 }
             }
             //Console.WriteLine("Receive thread ended");
+        }
+
+        protected void Process()
+        {
+            try
+            {
+                List<DataBlockArgs> blocksReceived = new List<DataBlockArgs>();
+                
+                while (Stream.IsOpen)
+                {
+                    lock (_dataBlocksLock)
+                    {
+                        while (_dataBlocks.Count > 0)
+                        {
+                            blocksReceived.Add(_dataBlocks.Dequeue());
+                        }
+                    }
+                    if (DataBlockReceived != null)
+                    {
+                        foreach (var args in blocksReceived)
+                        {
+                            DataBlockReceived(this, args);
+                        }
+                    }
+                    blocksReceived.Clear();
+
+                }
+            }
+            catch (Exception e)
+            {
+                if (!IsClosing)
+                {
+                    Task.Run(() =>
+                    {
+                        if (IsOpen) Close();
+                        OnStreamError(e);
+                    });
+                }
+            }
         }
 
         protected void Send()
