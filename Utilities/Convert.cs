@@ -297,6 +297,18 @@ namespace Chetch.Utilities
             return n;
         }
 
+        public static ulong ToULong(byte[] bytes, bool littleEndian = true)
+        {
+            ulong n = 0;
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                int idx = littleEndian ? i : bytes.Length - (i + 1);
+                ulong b = (ulong)bytes[i];
+                n += b << 8 * i;
+            }
+            return n;
+        }
+
 
         public static byte ToByte(byte[] bytes, bool littleEndian = true)
         {
@@ -312,6 +324,11 @@ namespace Chetch.Utilities
         public static int ToInt(byte[] bytes, bool littleEndian = true)
         {
             return (int)ToLong(bytes, littleEndian);
+        }
+
+        public static uint ToUInt(byte[] bytes, bool littleEndian = true)
+        {
+            return (uint)ToULong(bytes, littleEndian);
         }
 
         public static float ToFloat(byte[] bytes, bool littleEndian = true)
@@ -343,9 +360,19 @@ namespace Chetch.Utilities
                 return ToInt(bytes, littleEndian);
             }
 
+            if (type == typeof(uint))
+            {
+                return ToUInt(bytes, littleEndian);
+            }
+
             if (type == typeof(long))
             {
                 return ToLong(bytes, littleEndian);
+            }
+
+            if (type == typeof(ulong))
+            {
+                return ToULong(bytes, littleEndian);
             }
 
             if (type == typeof(double))
