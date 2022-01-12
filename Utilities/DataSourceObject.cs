@@ -211,7 +211,7 @@ namespace Chetch.Utilities
             ChangedProperties.Clear();
         }
 
-        public List<System.Reflection.PropertyInfo> GetProperties(int withAttributes)
+        public List<System.Reflection.PropertyInfo> GetProperties(int withAttributes = -1)
         {
             
             var properties = GetType().GetProperties();
