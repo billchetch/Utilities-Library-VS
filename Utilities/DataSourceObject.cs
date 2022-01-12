@@ -248,6 +248,11 @@ namespace Chetch.Utilities
             return null;
         }
 
+        public bool HasProperty(String propertyName, int withAttributes = -1)
+        {
+            return GetProperty(propertyName, withAttributes) != null;
+        }
+
         public PropertyAttribute GetPropertyAttribute(String propertyName)
         {
             var prop = GetProperty(propertyName, -1);
