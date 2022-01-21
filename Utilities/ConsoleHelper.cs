@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Chetch.Utilities
 {
-    public static class Console
+    public static class ConsoleHelper
     {
         static public void PK(String text)
         {

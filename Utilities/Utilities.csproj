@@ -48,7 +48,7 @@
     <Compile Include="CheckSum.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="BasicEncryption.cs" />
-    <Compile Include="Console.cs" />
+    <Compile Include="ConsoleHelper.cs" />
     <Compile Include="DataSourceObject.cs" />
     <Compile Include="DeviceManager.cs" />
     <Compile Include="Math.cs" />
