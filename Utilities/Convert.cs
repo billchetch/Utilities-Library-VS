@@ -362,7 +362,7 @@ namespace Chetch.Utilities
 
             if (type == typeof(Int16))
             {
-                return ToInt(bytes, littleEndian);
+                return ToInt16(bytes, littleEndian);
             }
 
             if (type == typeof(int))
