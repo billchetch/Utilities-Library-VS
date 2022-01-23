@@ -326,6 +326,11 @@ namespace Chetch.Utilities
             return (int)ToLong(bytes, littleEndian);
         }
 
+        public static int ToInt16(byte[] bytes, bool littleEndian = true)
+        {
+            return (Int16)ToLong(bytes, littleEndian);
+        }
+
         public static uint ToUInt(byte[] bytes, bool littleEndian = true)
         {
             return (uint)ToULong(bytes, littleEndian);
@@ -353,6 +358,11 @@ namespace Chetch.Utilities
             if (type == typeof(bool))
             {
                 return ToBoolean(bytes);
+            }
+
+            if (type == typeof(Int16))
+            {
+                return ToInt(bytes, littleEndian);
             }
 
             if (type == typeof(int))
