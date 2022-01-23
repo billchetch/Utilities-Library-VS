@@ -32,6 +32,8 @@ namespace Chetch.Utilities
             public const int DESCRIPTOR = 8;
             public const int ERROR = 16;
 
+            public const int DATETIME_DEFAULT_VALUE_MIN = 0;
+            public const int DATETIME_DEFAULT_VALUE_NOW = -1;
 
             private int _attributes = NONE;
 
@@ -106,7 +108,23 @@ namespace Chetch.Utilities
                     Object val = pa.DefaultValue;
                     if (val != null && prop.PropertyType != val.GetType())
                     {
-                        val = System.Convert.ChangeType(val, prop.PropertyType);
+                        if (prop.PropertyType == typeof(DateTime))
+                        {
+                            switch (val)
+                            {
+                                case PropertyAttribute.DATETIME_DEFAULT_VALUE_MIN:
+                                    val = DateTime.MinValue;
+                                    break;
+
+                                case PropertyAttribute.DATETIME_DEFAULT_VALUE_NOW:
+                                    val = DateTime.Now;
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            val = System.Convert.ChangeType(val, prop.PropertyType);
+                        }
                     }
                     //The sole reason for a Default Value property attribute is when we are using the 'Set/Get' methods
                     //for the property and so therefore cannot use compile time assignment.  Hence we use the Set method
