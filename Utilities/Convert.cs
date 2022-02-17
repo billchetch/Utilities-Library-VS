@@ -150,23 +150,38 @@ namespace Chetch.Utilities
         }
 
 
-        public static byte[] ToBytes(Object o)
+        public static byte[] ToBytes(Object o, int padToLength = -1)
         {
             if(o == null)
             {
                 throw new ArgumentNullException("Cannot covert null object ");
             }
-            if(o is String)
+            if(o is byte[])
+            {
+                return (byte[])o;
+            } else if (o.GetType().IsArray)
+            {
+                System.Collections.IEnumerable enumerable = (System.Collections.IEnumerable)o;
+                List<byte> bytes = new List<byte>();
+                foreach(var itm in enumerable)
+                {
+                    byte[] bts = ToBytes(itm, System.Runtime.InteropServices.Marshal.SizeOf(itm.GetType()));
+                    bytes.AddRange(bts);
+                }
+                return bytes.ToArray();
+            }
+            else if(o is String)
             {
                 return ToBytes((String)o);
             } else if(o is ValueType)
             {
-                return ToBytes((ValueType)o);
+                return ToBytes((ValueType)o, padToLength);
             } else
             {
                 throw new ArgumentException(String.Format("Cannot covert to bytes object of type: {0}", o.GetType()));
             }
         }
+
         public static byte[] ToBytes(String s)
         {
             byte[] bytes = new byte[s.Length];
@@ -355,67 +370,87 @@ namespace Chetch.Utilities
 
         public static dynamic ToType(Type type, byte[] bytes, bool littleEndian = true)
         {
-            if (type == typeof(byte))
+            if (type.IsArray)
             {
-                return System.Convert.ChangeType(ToByte(bytes), type);
+                Type et = type.GetElementType();
+                int size = System.Runtime.InteropServices.Marshal.SizeOf(et);
+                int n = bytes.Length / size;
+                System.Collections.IList typeArray = (System.Collections.IList)Activator.CreateInstance(type, n);
+                for (int i = 0; i < n; i++)
+                {
+                    byte[] bts = new byte[size];
+                    for (int j = 0; j < size; j++)
+                    {
+                        bts[j] = bytes[(i * size) + j];
+                    }
+                    typeArray[i] = ToType(et, bts, littleEndian);
+                }
+                return typeArray;
             }
-
-            if (type == typeof(bool))
+            else
             {
-                return ToBoolean(bytes);
-            }
+                if (type == typeof(byte))
+                {
+                    return System.Convert.ChangeType(ToByte(bytes), type);
+                }
 
-            if (type == typeof(Int16))
-            {
-                return ToInt16(bytes, littleEndian);
-            }
+                if (type == typeof(bool))
+                {
+                    return ToBoolean(bytes);
+                }
 
-            if (type == typeof(UInt16))
-            {
-                return ToUInt16(bytes, littleEndian);
-            }
+                if (type == typeof(Int16))
+                {
+                    return ToInt16(bytes, littleEndian);
+                }
 
-            if (type == typeof(int))
-            {
-                return ToInt(bytes, littleEndian);
-            }
+                if (type == typeof(UInt16))
+                {
+                    return ToUInt16(bytes, littleEndian);
+                }
 
-            if (type == typeof(uint))
-            {
-                return ToUInt(bytes, littleEndian);
-            }
+                if (type == typeof(int))
+                {
+                    return ToInt(bytes, littleEndian);
+                }
 
-            if (type == typeof(long))
-            {
-                return ToLong(bytes, littleEndian);
-            }
+                if (type == typeof(uint))
+                {
+                    return ToUInt(bytes, littleEndian);
+                }
 
-            if (type == typeof(ulong))
-            {
-                return ToULong(bytes, littleEndian);
-            }
+                if (type == typeof(long))
+                {
+                    return ToLong(bytes, littleEndian);
+                }
 
-            if (type == typeof(double))
-            {
-                return ToDouble(bytes, littleEndian);
-            }
+                if (type == typeof(ulong))
+                {
+                    return ToULong(bytes, littleEndian);
+                }
 
-            if (type == typeof(float) || type == typeof(Single))
-            {
-                return ToFloat(bytes, littleEndian);
-            }
+                if (type == typeof(double))
+                {
+                    return ToDouble(bytes, littleEndian);
+                }
 
-            if (type == typeof(String))
-            {
-                return ToString(bytes);
-            }
+                if (type == typeof(float) || type == typeof(Single))
+                {
+                    return ToFloat(bytes, littleEndian);
+                }
 
-            if (type.BaseType == typeof(System.Enum))
-            {
-                return Enum.ToObject(type, ToInt(bytes));
-            }
+                if (type == typeof(String))
+                {
+                    return ToString(bytes);
+                }
 
-            throw new Exception(String.Format("Cannot convert type {0}", type));
+                if (type.BaseType == typeof(System.Enum))
+                {
+                    return Enum.ToObject(type, ToInt(bytes));
+                }
+
+                throw new Exception(String.Format("Cannot convert type {0}", type));
+            }
         }
 
         public static T To<T>(byte[] bytes, bool littleEndian = true)
