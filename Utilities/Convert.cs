@@ -331,6 +331,11 @@ namespace Chetch.Utilities
             return (Int16)ToInt(bytes, littleEndian);
         }
 
+        public static UInt16 ToUInt16(byte[] bytes, bool littleEndian = true)
+        {
+            return (UInt16)ToInt(bytes, littleEndian);
+        }
+
         public static uint ToUInt(byte[] bytes, bool littleEndian = true)
         {
             return (uint)ToULong(bytes, littleEndian);
