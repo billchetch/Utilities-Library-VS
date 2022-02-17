@@ -370,6 +370,11 @@ namespace Chetch.Utilities
                 return ToInt16(bytes, littleEndian);
             }
 
+            if (type == typeof(UInt16))
+            {
+                return ToUInt16(bytes, littleEndian);
+            }
+
             if (type == typeof(int))
             {
                 return ToInt(bytes, littleEndian);
