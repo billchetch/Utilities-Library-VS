@@ -13,7 +13,7 @@ namespace Chetch.Utilities
     public static class SerialPorts
     {
         /// <summary>
-        /// Class to provide 'Peek' functionality for reading first byte
+        /// Class to provide 'Peek' functionality for reading first byte.
         /// </summary>
         public class SerialPort : System.IO.Ports.SerialPort
         {
