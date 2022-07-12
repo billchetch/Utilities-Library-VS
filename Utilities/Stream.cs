@@ -304,6 +304,8 @@ namespace Chetch.Utilities.Streams
                 }
                 _sendThread = new Thread(Send);
                 _sendThread.Name = "SFCSend";
+                _sendThread.IsBackground = true;
+                _sendThread.Priority = ThreadPriority.BelowNormal;
                 _sendThread.Start();
 
                 //receive thread
@@ -316,6 +318,8 @@ namespace Chetch.Utilities.Streams
                 }
                 _receiveThread = new Thread(Receive);
                 _receiveThread.Name = "SFCReceive";
+                _receiveThread.IsBackground = true;
+                _receiveThread.Priority = ThreadPriority.BelowNormal;
                 _receiveThread.Start();
 
                 //process thread
@@ -328,6 +332,8 @@ namespace Chetch.Utilities.Streams
                 }
                 _processThread = new Thread(Process);
                 _processThread.Name = "SFCProcess";
+                _processThread.IsBackground = true;
+                _processThread.Priority = ThreadPriority.BelowNormal;
                 _processThread.Start();
 
                 Reset(true);
