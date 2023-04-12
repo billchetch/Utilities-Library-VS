@@ -242,8 +242,10 @@ namespace Chetch.Utilities.Streams
 
         
         private Thread _sendThread;
+        private EventWaitHandle _sendWaithHandle;
         private Thread _receiveThread;
         private Thread _processThread;
+        private EventWaitHandle _processsWaitHandle;
 
         private bool _opening = false;
         private bool _closing = false;
@@ -294,7 +296,7 @@ namespace Chetch.Utilities.Streams
             {
                 Stream.Open();
 
-                //send thread
+                //Send thread
                 if (_sendThread != null)
                 {
                     while (_sendThread.IsAlive)
@@ -306,9 +308,12 @@ namespace Chetch.Utilities.Streams
                 _sendThread.Name = "SFCSend";
                 _sendThread.IsBackground = true;
                 _sendThread.Priority = ThreadPriority.BelowNormal;
+
+                //start the thread
+                _sendWaithHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
                 _sendThread.Start();
 
-                //receive thread
+                //Receive thread
                 if (_receiveThread != null)
                 {
                     while (_receiveThread.IsAlive)
@@ -320,9 +325,11 @@ namespace Chetch.Utilities.Streams
                 _receiveThread.Name = "SFCReceive";
                 _receiveThread.IsBackground = true;
                 _receiveThread.Priority = ThreadPriority.BelowNormal;
+
+                //start the thread
                 _receiveThread.Start();
 
-                //process thread
+                //Process thread
                 if (_processThread != null)
                 {
                     while (_processThread.IsAlive)
@@ -334,6 +341,9 @@ namespace Chetch.Utilities.Streams
                 _processThread.Name = "SFCProcess";
                 _processThread.IsBackground = true;
                 _processThread.Priority = ThreadPriority.BelowNormal;
+
+                //start the thread
+                _processsWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
                 _processThread.Start();
 
                 Reset(true);
@@ -352,6 +362,7 @@ namespace Chetch.Utilities.Streams
             Stream.Close();
             if (_sendThread != null)
             {
+                _sendWaithHandle.Set();
                 while (_sendThread.IsAlive)
                 {
                     Thread.Sleep(100);
@@ -366,6 +377,7 @@ namespace Chetch.Utilities.Streams
             }
             if (_processThread != null)
             {
+                _processsWaitHandle.Set();
                 while (_processThread.IsAlive)
                 {
                     Thread.Sleep(100);
@@ -533,6 +545,7 @@ namespace Chetch.Utilities.Streams
                                             _dataBlocks.Enqueue(new DataBlockArgs(ReceiveBuffer));
                                         }
                                         ReceiveBuffer.Clear();
+                                        _processsWaitHandle.Set(); //release Process thread
                                         break;
 
                                     case COMMAND_BYTE:
@@ -578,6 +591,7 @@ namespace Chetch.Utilities.Streams
                             SendCTS();
                         } //end read bytes loop
                     }
+
                     if (_remoteRequestedCTS)
                     {
                         if (isReadyToReceive(true))
@@ -618,6 +632,8 @@ namespace Chetch.Utilities.Streams
                 
                 while (Stream.IsOpen)
                 {
+                    _processsWaitHandle.WaitOne();
+
                     lock (_dataBlocksLock)
                     {
                         while (_dataBlocks.Count > 0)
@@ -655,6 +671,8 @@ namespace Chetch.Utilities.Streams
             {
                 while (Stream.IsOpen)
                 {
+                    _sendWaithHandle.WaitOne();
+
                     if (_sendBuffer.Count > 0)
                     {
                         lock (_sendBufferLock)
@@ -680,18 +698,23 @@ namespace Chetch.Utilities.Streams
             //Console.WriteLine("Send thread ended");
         }
 
+        //Reading methods
         protected int Read(byte[] buffer, int offset, int count)
         {
             int n = Stream.Read(buffer, offset, count);
             return n;
         }
 
-        public void WriteByte(byte b, bool count = true)
+        //Writing methods
+        //All bytes written must ultimately pass through this method
+        protected void WriteByte(byte b, bool count = true, bool setWaitHandle = true)
         {
             lock (_sendBufferLock)
             {
                 _sendBuffer.Add(b);
             }
+            if(setWaitHandle)_sendWaithHandle.Set();
+
             if (count)
             {
                 //Flow control
@@ -769,7 +792,7 @@ namespace Chetch.Utilities.Streams
             }
             lock (_writeLock)
             {
-                WriteByte(EVENT_BYTE, false);
+                WriteByte(EVENT_BYTE, false, false);
                 WriteByte(b, false);
             }
         }
@@ -888,7 +911,7 @@ namespace Chetch.Utilities.Streams
                                 OnStreamError(new Exception("Stream is not ready"));
                                 return;
                             }
-                            WriteByte(b);
+                            WriteByte(b, true, !_cts || i >= bytes2send.Count);
                         } while (_cts && i < bytes2send.Count); //loop a block
                     } //end write lock
                 } //end loop throught byte blocks
