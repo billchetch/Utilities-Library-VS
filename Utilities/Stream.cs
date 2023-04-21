@@ -301,6 +301,7 @@ namespace Chetch.Utilities.Streams
                 {
                     while (_sendThread.IsAlive)
                     {
+                        _sendThread.Abort();
                         Thread.Sleep(100);
                     }
                 }
@@ -318,6 +319,7 @@ namespace Chetch.Utilities.Streams
                 {
                     while (_receiveThread.IsAlive)
                     {
+                        _receiveThread.Abort();
                         Thread.Sleep(100);
                     }
                 }
@@ -334,6 +336,7 @@ namespace Chetch.Utilities.Streams
                 {
                     while (_processThread.IsAlive)
                     {
+                        _processThread.Abort();
                         Thread.Sleep(100);
                     }
                 }
