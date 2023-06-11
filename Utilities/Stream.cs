@@ -222,8 +222,9 @@ namespace Chetch.Utilities.Streams
         private bool _remoteRequestedCTS = false;
         private DateTime _lastRemoteCTSRequest;
 
-        private int _bytesSent = 0;
-        private int _bytesReceived = 0;
+        private ulong _bytesSent = 0;
+        private int _bytesSentSinceCTS = 0;
+        private ulong _bytesReceived = 0;
         private int _uartLocalBufferSize = 0;
         private int _uartRemoteBufferSize = 0;
         private bool _localReset = false;
@@ -240,7 +241,6 @@ namespace Chetch.Utilities.Streams
         private Object _sendBufferLock = new Object();
 
 
-        
         private Thread _sendThread;
         private EventWaitHandle _sendWaithHandle;
         private Thread _receiveThread;
@@ -261,7 +261,7 @@ namespace Chetch.Utilities.Streams
         public event EventHandler<EventByteArgs> EventByteReceived;
         public event EventHandler<EventByteArgs> EventByteSent;
 
-        public delegate bool ReadyToReceiveHandler(StreamFlowController sfc, bool request4cts);
+        public delegate bool ReadyToReceiveHandler(StreamFlowController sfc);
         public ReadyToReceiveHandler ReadyToReceive = null;
 
         public bool IsOpen => Stream != null && Stream.IsOpen;
@@ -270,8 +270,9 @@ namespace Chetch.Utilities.Streams
         public bool IsOpening => _opening;
         public bool IsClosing => _closing;
 
-        public int BytesSent => _bytesSent;
-        public int BytesReceived => _bytesReceived;
+        
+        public ulong BytesSent => _bytesSent;
+        public ulong BytesReceived => _bytesReceived;
 
         public StreamFlowController(IStream stream, int localBufferSize, int remoteBufferSize)
         {
@@ -395,6 +396,7 @@ namespace Chetch.Utilities.Streams
 
         public void Reset(bool sendCommandByte = false)
         {
+            //Console.WriteLine("Resetting...");
             lock (_sendBufferLock)
             {
                 _sendBuffer.Clear();
@@ -410,14 +412,16 @@ namespace Chetch.Utilities.Streams
             while (_sendBuffer.Count > 0) { }; //wait for the send buffer to empty
             _cts = true;
             _bytesSent = 0;
+            _bytesSentSinceCTS = 0;
             _bytesReceived = 0;
             _localRequestedCTS = false;
             _remoteRequestedCTS = false;
             SendEvent(Event.RESET);
             _localReset = true;
+            //Console.WriteLine("Reset");
 
             //diagnostics
-            
+
         }
 
 
@@ -441,7 +445,7 @@ namespace Chetch.Utilities.Streams
         private bool requiresCTS(int byteCount, int bufferSize)
         {
             if (bufferSize <= 0) return false;
-            return byteCount == (bufferSize - 2);
+            return byteCount == (bufferSize - 2); //The 2 here is to allow for a command byte such as reset to be sent regardless
         }
 
         protected void OnStreamError(Exception e)
@@ -471,14 +475,14 @@ namespace Chetch.Utilities.Streams
                 while (Stream.IsOpen)
                 {
                     //readBuffer = new byte[1024];
-                    int n = Read(readBuffer, 0, readBuffer.Length);
-                    if (n < 0)
+                    int bytes2read = Read(readBuffer, 0, readBuffer.Length);
+                    if (bytes2read < 0)
                     {
-                        SendCTS();
+                        //nothing to read
                     }
                     else
                     {
-                        for (int i = 0; i < n; i++)
+                        for (int i = 0; i < bytes2read; i++)
                         {
                             byte b = readBuffer[i];
                             //Console.WriteLine("<--- Received: {0}", b);
@@ -525,7 +529,6 @@ namespace Chetch.Utilities.Streams
                             {
                                 isData = true;
                                 slashed = false;
-                                _bytesReceived++;
                             }
                             else if (IsSystemByte(b))
                             {
@@ -561,15 +564,13 @@ namespace Chetch.Utilities.Streams
                                         break;
 
                                     case CTS_BYTE:
-                                        if (!_cts) //we check that _cts is indeed false so tha we don't reset _bytesSent unnecessarily
+                                        //Console.WriteLine("<--- CTS {2} (bytes sent/received {0}/{1})", _bytesSent, _bytesReceived, _cts);
+
+                                        lock (_writeLock)
                                         {
-                                            //Console.WriteLine("<--- CTS (bytes sent/received {0}/{1})", _bytesSent, _bytesReceived);
-                                            lock (_writeLock)
-                                            {
-                                                _bytesSent = 0; //Note: important tha we set _bytesSent BEFORE _cts so that the send loop starts again with _bytesSent already reset
-                                                _cts = true;
-                                                _localRequestedCTS = false; //request has been granted
-                                            }
+                                            _bytesSentSinceCTS = 0;
+                                            _cts = true;
+                                            _localRequestedCTS = false; //request has been granted
                                         }
                                         break;
 
@@ -579,7 +580,6 @@ namespace Chetch.Utilities.Streams
                             }
                             else
                             {
-                                _bytesReceived++;
                                 isData = true;
                             }
 
@@ -587,19 +587,23 @@ namespace Chetch.Utilities.Streams
                             if (isData && IsReady)
                             {
                                 ReceiveBuffer.Add(b);
-                                //_prevByte = b;
                             }
 
-                            //Flow control
-                            SendCTS();
+                            _bytesReceived++;
                         } //end read bytes loop
+
+                        //so here we have read bytes2read from the uart buffer
+                        if(_uartLocalBufferSize > 0 && isReadyToReceive())
+                        {
+                            SendCTS();
+                        }
                     }
 
-                    if (_remoteRequestedCTS)
+                    /*if (_remoteRequestedCTS)
                     {
-                        if (isReadyToReceive(true))
+                        if (isReadyToReceive())
                         {
-                            SendCTS(true);
+                            SendCTS();
                         } 
                         else 
                         {
@@ -610,7 +614,7 @@ namespace Chetch.Utilities.Streams
                                 _remoteRequestedCTS = false;
                             }
                         }
-                    }
+                    }*/
                 } // end  while is open loop
             } 
             catch (Exception e)
@@ -681,6 +685,7 @@ namespace Chetch.Utilities.Streams
                         lock (_sendBufferLock)
                         {
                             Stream.Write(_sendBuffer.ToArray(), 0, _sendBuffer.Count);
+                            Console.WriteLine("----> Sending {0} bytes", _sendBuffer.Count);
                             _sendBuffer.Clear();
                         }
                     }
@@ -710,7 +715,7 @@ namespace Chetch.Utilities.Streams
 
         //Writing methods
         //All bytes written must ultimately pass through this method
-        protected void WriteByte(byte b, bool count = true, bool setWaitHandle = true)
+        protected void WriteByte(byte b, bool setWaitHandle = true)
         {
             lock (_sendBufferLock)
             {
@@ -718,32 +723,26 @@ namespace Chetch.Utilities.Streams
             }
             if(setWaitHandle)_sendWaithHandle.Set();
 
-            if (count)
+            _bytesSent++;
+            if (_uartRemoteBufferSize > 0) //condition for byte counting flow control
             {
-                //Flow control
-                _bytesSent++;
-                if (requiresCTS(_bytesSent, _uartRemoteBufferSize))
-                {
-                    //Console.WriteLine("*** Setting CTS to false after sending {0},  i = {1}, bytesSent = {2}", b, i, _bytesSent);
-                    _cts = false;
-                    _lastCTSrequired = DateTime.Now;
-                }
+                _bytesSentSinceCTS++;
             }
         }
 
-        private void sendByte(byte b, bool count = true)
+        private void sendByte(byte b)
         {
             lock (_writeLock)
             {
-                WriteByte(b, count);
+                WriteByte(b);
             }
         }
 
-        private bool isReadyToReceive(bool request4cts)
+        private bool isReadyToReceive()
         {
             if (ReadyToReceive != null)
             {
-                return ReadyToReceive(this, request4cts);
+                return ReadyToReceive(this);
             }
             else
             {
@@ -751,20 +750,11 @@ namespace Chetch.Utilities.Streams
             }
         }
 
-        public bool SendCTS(bool overrideFlowControl = false)
+        public void SendCTS()
         {
-            if ((requiresCTS(_bytesReceived, _uartLocalBufferSize) && isReadyToReceive(false)) || overrideFlowControl)
-            {
-                //Console.WriteLine("----> CTS ... sent/received {0}/{1}", _bytesSent, _bytesReceived);
-                _bytesReceived = 0;
-                _remoteRequestedCTS = false;
-                sendByte(CTS_BYTE, false);
-                return true;
-            } 
-            else
-            {
-                return false;
-            }
+             //Console.WriteLine("----> CTS ... sent/received {0}/{1}", _bytesSent, _bytesReceived);
+             _remoteRequestedCTS = false;
+             sendByte(CTS_BYTE);
         }
 
 
@@ -772,8 +762,9 @@ namespace Chetch.Utilities.Streams
         {
             lock (_writeLock)
             {
+                //Console.WriteLine("Send command {0}", b);
                 WriteByte(COMMAND_BYTE, false);
-                WriteByte(b, false);
+                WriteByte(b);
             }
         }
 
@@ -795,8 +786,9 @@ namespace Chetch.Utilities.Streams
             }
             lock (_writeLock)
             {
-                WriteByte(EVENT_BYTE, false, false);
-                WriteByte(b, false);
+                Console.WriteLine("Send event {0}", b);
+                WriteByte(EVENT_BYTE, false);
+                WriteByte(b);
             }
         }
 
@@ -865,7 +857,7 @@ namespace Chetch.Utilities.Streams
                             Thread.Sleep(1);
                         }
 
-                        if (CTSTimeout > 0 && !_localRequestedCTS) //we can only request once
+                        /*if (CTSTimeout > 0 && !_localRequestedCTS) //we can only request once
                         {
                             ms = (double)(DateTime.Now.Ticks - _lastCTSrequired.Ticks) / (double)TimeSpan.TicksPerMillisecond;
                             if (ms > CTSTimeout && !_cts)
@@ -873,7 +865,7 @@ namespace Chetch.Utilities.Streams
                                 SendEvent(Event.CTS_TIMEOUT);
                                 _localRequestedCTS = true;
                             }
-                        }
+                        }*/
                     }
                     if (waiting)
                     {
@@ -894,7 +886,7 @@ namespace Chetch.Utilities.Streams
                             }
                             else if (b == SLASH_BYTE)
                             {
-                                if (requiresCTS(_bytesSent + 1, _uartRemoteBufferSize))
+                                if (requiresCTS(_bytesSentSinceCTS + 1, _uartRemoteBufferSize))
                                 {
                                     b = PAD_BYTE;
                                 }
@@ -914,7 +906,15 @@ namespace Chetch.Utilities.Streams
                                 OnStreamError(new Exception("Stream is not ready"));
                                 return;
                             }
-                            WriteByte(b, true, !_cts || i >= bytes2send.Count);
+                            WriteByte(b, _cts || i >= bytes2send.Count);
+
+                            //check cts condition
+                            if (requiresCTS(_bytesSentSinceCTS, _uartRemoteBufferSize))
+                            {
+                                Console.WriteLine("*** Setting CTS to false after sending {0}, bytesSentSinceCTS = {1}, remote buffer size {2}", b, _bytesSentSinceCTS, _uartRemoteBufferSize);
+                                _cts = false;
+                                _lastCTSrequired = DateTime.Now;
+                            }
                         } while (_cts && i < bytes2send.Count); //loop a block
                     } //end write lock
                 } //end loop throught byte blocks
