@@ -218,13 +218,12 @@ namespace Chetch.Utilities.Streams
         private bool _cts = true;
         public int CTSTimeout { get; set; } = -1;
         private DateTime _lastCTSrequired;
-        private bool _localRequestedCTS = false;
-        private bool _remoteRequestedCTS = false;
-        private DateTime _lastRemoteCTSRequest;
-
+        private bool _sentCTSTimeout = false;
+        
         private ulong _bytesSent = 0;
         private int _bytesSentSinceCTS = 0;
         private ulong _bytesReceived = 0;
+        private int _bytesReceivedSinceCTS = 0;
         private int _uartLocalBufferSize = 0;
         private int _uartRemoteBufferSize = 0;
         private bool _localReset = false;
@@ -414,8 +413,8 @@ namespace Chetch.Utilities.Streams
             _bytesSent = 0;
             _bytesSentSinceCTS = 0;
             _bytesReceived = 0;
-            _localRequestedCTS = false;
-            _remoteRequestedCTS = false;
+            _bytesReceivedSinceCTS = 0;
+            _sentCTSTimeout = false;
             SendEvent(Event.RESET);
             _localReset = true;
             //Console.WriteLine("Reset");
@@ -445,7 +444,7 @@ namespace Chetch.Utilities.Streams
         private bool requiresCTS(int byteCount, int bufferSize)
         {
             if (bufferSize <= 0) return false;
-            return byteCount == (bufferSize - 2); //The 2 here is to allow for a command byte such as reset to be sent regardless
+            return byteCount >= (bufferSize - 2); //The 2 here is to allow for a command byte such as reset to be sent regardless
         }
 
         protected void OnStreamError(Exception e)
@@ -476,6 +475,7 @@ namespace Chetch.Utilities.Streams
                 {
                     //readBuffer = new byte[1024];
                     int bytes2read = Read(readBuffer, 0, readBuffer.Length);
+
                     if (bytes2read < 0)
                     {
                         //nothing to read
@@ -512,12 +512,11 @@ namespace Chetch.Utilities.Streams
                                         break;
 
                                     case (byte)Event.CTS_TIMEOUT:
-                                        _remoteRequestedCTS = true;
-                                        _lastRemoteCTSRequest = DateTime.Now;
+                                        //Console.WriteLine("<----- Received CTS Timeout");
                                         break;
 
                                     case (byte)Event.CTS_REQUEST_TIMEOUT:
-                                        _localRequestedCTS = false;
+                                        //TODO: complete this
                                         break;
                                 }
                                 if (EventByteReceived != null)
@@ -533,8 +532,7 @@ namespace Chetch.Utilities.Streams
                             else if (IsSystemByte(b))
                             {
                                 isData = false;
-                                if (b != CTS_BYTE && b != EVENT_BYTE && b != COMMAND_BYTE) _bytesReceived++;
-
+                                
                                 switch (b)
                                 {
                                     case SLASH_BYTE:
@@ -564,13 +562,13 @@ namespace Chetch.Utilities.Streams
                                         break;
 
                                     case CTS_BYTE:
-                                        //Console.WriteLine("<--- CTS {2} (bytes sent/received {0}/{1})", _bytesSent, _bytesReceived, _cts);
+                                        Console.WriteLine("<--- CTS {2} (bytes sent/received {0}/{1})", _bytesSentSinceCTS, _bytesReceivedSinceCTS, _cts);
 
                                         lock (_writeLock)
                                         {
                                             _bytesSentSinceCTS = 0;
                                             _cts = true;
-                                            _localRequestedCTS = false; //request has been granted
+                                            _sentCTSTimeout = false; //request has been granted
                                         }
                                         break;
 
@@ -590,31 +588,26 @@ namespace Chetch.Utilities.Streams
                             }
 
                             _bytesReceived++;
+                            if(_uartLocalBufferSize > 0)
+                            {
+                                _bytesReceivedSinceCTS++;
+                            }
                         } //end read bytes loop
+                    } //end if there are bytes to read 
 
-                        //so here we have read bytes2read from the uart buffer
-                        if(_uartLocalBufferSize > 0 && isReadyToReceive())
-                        {
-                            SendCTS();
-                        }
+                    if (bytes2read > 0)
+                    {
+                        Console.WriteLine("Bytes recv since CTS: {0}", _bytesReceivedSinceCTS);
                     }
 
-                    /*if (_remoteRequestedCTS)
+                    //so here we have read bytes2read from the uart buffer  || _receivedCTSTimeout
+                    if (((_uartLocalBufferSize > 0 && requiresCTS(_bytesReceivedSinceCTS, _uartLocalBufferSize))) && isReadyToReceive())
                     {
-                        if (isReadyToReceive())
-                        {
-                            SendCTS();
-                        } 
-                        else 
-                        {
-                            double ms = (double)(DateTime.Now.Ticks - _lastRemoteCTSRequest.Ticks) / (double)TimeSpan.TicksPerMillisecond;
-                            if(ms > 2000)
-                            {
-                                SendEvent(Event.CTS_REQUEST_TIMEOUT);
-                                _remoteRequestedCTS = false;
-                            }
-                        }
-                    }*/
+                        Console.WriteLine("---->> Sending CTS byte...");
+                        SendCTS();
+                        _bytesReceivedSinceCTS = 0;
+                    }
+
                 } // end  while is open loop
             } 
             catch (Exception e)
@@ -685,7 +678,7 @@ namespace Chetch.Utilities.Streams
                         lock (_sendBufferLock)
                         {
                             Stream.Write(_sendBuffer.ToArray(), 0, _sendBuffer.Count);
-                            Console.WriteLine("----> Sending {0} bytes", _sendBuffer.Count);
+                            //Console.WriteLine("----> Sending {0} bytes", _sendBuffer.Count);
                             _sendBuffer.Clear();
                         }
                     }
@@ -753,7 +746,6 @@ namespace Chetch.Utilities.Streams
         public void SendCTS()
         {
              //Console.WriteLine("----> CTS ... sent/received {0}/{1}", _bytesSent, _bytesReceived);
-             _remoteRequestedCTS = false;
              sendByte(CTS_BYTE);
         }
 
@@ -786,7 +778,7 @@ namespace Chetch.Utilities.Streams
             }
             lock (_writeLock)
             {
-                Console.WriteLine("Send event {0}", b);
+                //Console.WriteLine("Send event {0}", b);
                 WriteByte(EVENT_BYTE, false);
                 WriteByte(b);
             }
@@ -857,15 +849,18 @@ namespace Chetch.Utilities.Streams
                             Thread.Sleep(1);
                         }
 
-                        /*if (CTSTimeout > 0 && !_localRequestedCTS) //we can only request once
+                        if (CTSTimeout > 0 && !_sentCTSTimeout) //we can only request once
                         {
-                            ms = (double)(DateTime.Now.Ticks - _lastCTSrequired.Ticks) / (double)TimeSpan.TicksPerMillisecond;
+                            ms = (DateTime.Now - _lastCTSrequired).TotalMilliseconds;
                             if (ms > CTSTimeout && !_cts)
                             {
-                                SendEvent(Event.CTS_TIMEOUT);
-                                _localRequestedCTS = true;
+                                _sentCTSTimeout = true;
+                                //SendEvent(Event.CTS_TIMEOUT);
+
+                                //TODO: something here bsed on some CTS options
+                                
                             }
-                        }*/
+                        }
                     }
                     if (waiting)
                     {
