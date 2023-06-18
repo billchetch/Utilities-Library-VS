@@ -349,6 +349,7 @@ namespace Chetch.Utilities.Streams
                 _processsWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
                 _processThread.Start();
 
+                Console.WriteLine("Reset called from Open");
                 Reset(true);
             } finally
             {
@@ -403,24 +404,26 @@ namespace Chetch.Utilities.Streams
             ReceiveBuffer.Clear();
             _dataBlocks.Clear();
 
-            if (sendCommandByte)
-            {
-                _remoteReset = false;
-                SendCommand(Command.RESET); //will reset remote
-            }
-            while (_sendBuffer.Count > 0) { }; //wait for the send buffer to empty
+            
             _cts = true;
             _bytesSent = 0;
             _bytesSentSinceCTS = 0;
             _bytesReceived = 0;
             _bytesReceivedSinceCTS = 0;
             _sentCTSTimeout = false;
-            SendEvent(Event.RESET);
             _localReset = true;
-            //Console.WriteLine("Reset");
 
-            //diagnostics
 
+            if (sendCommandByte)
+            {
+                Console.WriteLine("Sending RESET command ... Bytes sent / received since last CTS sent: {0} / {1}", _bytesSentSinceCTS, _bytesReceivedSinceCTS);
+                _remoteReset = false;
+                SendCommand(Command.RESET); //will reset remote
+            }
+            while (_sendBuffer.Count > 0) { }; //wait for the send buffer to empty
+
+            Console.WriteLine("Sending RESET Event ... Bytes sent / received since last CTS sent: {0} / {1}", _bytesSentSinceCTS, _bytesReceivedSinceCTS);
+            SendEvent(Event.RESET);
         }
 
 
@@ -493,7 +496,10 @@ namespace Chetch.Utilities.Streams
                                 switch (b)
                                 {
                                     case (byte)Command.RESET:
+                                        Console.WriteLine("Reset command received .. caling Reset(false)... Bytes sent / received since last CTS sent: {0} / {1}", _bytesSentSinceCTS, _bytesReceivedSinceCTS);
                                         Reset(false); //do not send command for remote to reset
+                                        _bytesReceivedSinceCTS = 1;
+                                        _bytesReceived = 1;
                                         break;
                                 }
                                 if (CommandByteReceived != null)
@@ -508,6 +514,7 @@ namespace Chetch.Utilities.Streams
                                 switch (b)
                                 {
                                     case (byte)Event.RESET:
+                                        Console.WriteLine("Remote RESET Event received ... Bytes sent / received since last CTS sent: {0} / {1}", _bytesSentSinceCTS, _bytesReceivedSinceCTS);
                                         _remoteReset = true;
                                         break;
 
@@ -562,7 +569,7 @@ namespace Chetch.Utilities.Streams
                                         break;
 
                                     case CTS_BYTE:
-                                        Console.WriteLine("<--- CTS {2} (bytes sent/received {0}/{1})", _bytesSentSinceCTS, _bytesReceivedSinceCTS, _cts);
+                                        Console.WriteLine("<<--- Received CTS byte (bytes sent/received {0}/{1})", _bytesSentSinceCTS, _bytesReceivedSinceCTS);
 
                                         lock (_writeLock)
                                         {
@@ -595,9 +602,9 @@ namespace Chetch.Utilities.Streams
                         } //end read bytes loop
                     } //end if there are bytes to read 
 
-                    if (bytes2read > 0)
+                    if(bytes2read > 0)
                     {
-                        Console.WriteLine("Bytes recv since CTS: {0}", _bytesReceivedSinceCTS);
+                        Console.WriteLine("Bytes sent / received since last CTS sent: {0} / {1}", _bytesSentSinceCTS, _bytesReceivedSinceCTS);
                     }
 
                     //so here we have read bytes2read from the uart buffer  || _receivedCTSTimeout
