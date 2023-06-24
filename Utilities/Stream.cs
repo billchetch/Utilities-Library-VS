@@ -910,7 +910,10 @@ namespace Chetch.Utilities.Streams
                                 OnStreamError(new Exception("Stream is not ready"));
                                 return;
                             }
-                            
+
+                            //write the byte to teh buffer but don't release send thread
+                            WriteByte(b, false);
+
                             //check cts condition
                             if (requiresCTS(_bytesSentSinceCTS, _uartRemoteBufferSize))
                             {
@@ -919,11 +922,11 @@ namespace Chetch.Utilities.Streams
                                 _lastCTSrequired = DateTime.Now;
                             }
 
-                            //finally write the byte and release send thread (setWaitHandle == true) if we 
-                            //have come to the end OR if we are waiting for a CTS from the remote (which is also byte counting)
-                            WriteByte(b, !_cts || i >= bytes2send.Count);
-
                         } while (_cts && i < bytes2send.Count); //loop a block
+
+                        //release send thread
+                        _sendWaithHandle.Set();
+
                     } //end write lock
                 } //end loop throught byte blocks
             } //end send lock
