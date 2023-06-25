@@ -864,10 +864,9 @@ namespace Chetch.Utilities.Streams
                             if (ms > CTSTimeout && !_cts)
                             {
                                 _sentCTSTimeout = true;
-                                //SendEvent(Event.CTS_TIMEOUT);
+                                SendEvent(Event.CTS_TIMEOUT);
 
-                                //TODO: something here bsed on some CTS options
-                                
+                                throw new TimeoutException(String.Format("Timeoud out in Send waiting for CTS flag to set to true after {0} ms", ms));
                             }
                         }
                     }
