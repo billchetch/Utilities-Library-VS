@@ -17,7 +17,13 @@ namespace Chetch.Utilities
 
             foreach (var v in vals)
             {
-                _innerMap[(E)v] = (V)v;
+                try
+                {
+                    _innerMap[(E)v] = (V)v;
+                } catch (InvalidCastException e)
+                {
+                    _innerMap[(E)v] = (V)System.Convert.ChangeType(v, typeof(V));
+                }
             }
             updateSortedKeys();
         }
