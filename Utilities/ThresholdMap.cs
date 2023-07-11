@@ -20,7 +20,7 @@ namespace Chetch.Utilities
                 try
                 {
                     _innerMap[(E)v] = (V)v;
-                } catch (InvalidCastException e)
+                } catch (InvalidCastException)
                 {
                     _innerMap[(E)v] = (V)System.Convert.ChangeType(v, typeof(V));
                 }
