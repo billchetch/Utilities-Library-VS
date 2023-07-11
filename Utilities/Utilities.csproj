@@ -60,6 +60,7 @@
     <Compile Include="Sampler.cs" />
     <Compile Include="SerialPorts.cs" />
     <Compile Include="Stream.cs" />
+    <Compile Include="ThresholdMap.cs" />
     <Compile Include="Win32.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

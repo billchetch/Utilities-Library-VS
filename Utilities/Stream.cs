@@ -625,7 +625,13 @@ namespace Chetch.Utilities.Streams
                 {
                     Task.Run(() =>
                     {
-                        if (IsOpen) Close();
+                        if (IsOpen)
+                        {
+                            try
+                            {
+                                Close();
+                            } catch {}
+                        }
                         OnStreamError(e);
                     });
                 }
@@ -667,7 +673,14 @@ namespace Chetch.Utilities.Streams
                 {
                     Task.Run(() =>
                     {
-                        if (IsOpen) Close();
+                        if (IsOpen)
+                        {
+                            try
+                            {
+                                Close();
+                            }
+                            catch {}
+                        }
                         OnStreamError(e);
                     });
                 }
@@ -699,7 +712,14 @@ namespace Chetch.Utilities.Streams
                 {
                     Task.Run(() =>
                     {
-                        if (IsOpen) Close();
+                        if (IsOpen)
+                        {
+                            try
+                            {
+                                Close();
+                            }
+                            catch {}
+                        }
                         OnStreamError(e);
                     });
                 }
