@@ -363,27 +363,43 @@ namespace Chetch.Utilities.Streams
 
             _closing = true;
             Stream.Close();
+            DateTime started = DateTime.Now;
+            int abortThreadTimeout = 20; //in seconds
             if (_sendThread != null)
             {
                 _sendWaithHandle.Set();
                 while (_sendThread.IsAlive)
                 {
                     Thread.Sleep(100);
+                    if((DateTime.Now - started).TotalSeconds > abortThreadTimeout)
+                    {
+                        _sendThread.Abort();
+                    }
                 }
             }
             if (_receiveThread != null)
             {
+                started = DateTime.Now;
                 while (_receiveThread.IsAlive)
                 {
                     Thread.Sleep(100);
+                    if ((DateTime.Now - started).TotalSeconds > abortThreadTimeout)
+                    {
+                        _receiveThread.Abort();
+                    }
                 }
             }
             if (_processThread != null)
             {
+                started = DateTime.Now;
                 _processsWaitHandle.Set();
                 while (_processThread.IsAlive)
                 {
                     Thread.Sleep(100);
+                    if ((DateTime.Now - started).TotalSeconds > abortThreadTimeout)
+                    {
+                        _processThread.Abort();
+                    }
                 }
             }
             _remoteReset = false;
