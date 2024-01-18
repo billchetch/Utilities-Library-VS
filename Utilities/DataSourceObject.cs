@@ -219,7 +219,15 @@ namespace Chetch.Utilities
                 var prop = GetProperty(kvp.Key, PropertyAttribute.SERIALIZABLE);
                 if (prop != null)
                 {
-                    prop.SetValue(this, kvp.Value);
+                    Object v = kvp.Value;
+                    if(kvp.Value is Decimal )
+                    {
+                        if(prop.PropertyType == typeof(double))
+                        {
+                            v = Decimal.ToDouble((Decimal)kvp.Value);
+                        }   
+                    }
+                    prop.SetValue(this, v);
                 }
             }
         }
